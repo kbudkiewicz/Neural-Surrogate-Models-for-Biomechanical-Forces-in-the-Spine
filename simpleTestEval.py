@@ -26,6 +26,8 @@ from torch.utils.data import Dataset, DataLoader
 import torchvision.models.video as video_models
 import nibabel as nib
 import wandb
+import seaborn as sns
+import pandas as pd
 
 #%% DATASET
 class CTDataset(Dataset):
@@ -203,25 +205,62 @@ axes[2].set_ylabel("RMSE")
 plt.tight_layout()
 plt.show()
 #%%
-absDiffs = gts - preds   # just to trigger the plot
+diffs = gts - preds   # just to trigger the plot
+relDiffs = diffs / (np.abs(gts) + 1e-8)
+print(f"Absolute differences mean: {np.mean(np.abs(diffs), axis=0)}")
+print(f"Relative differences mean: {np.mean(np.abs(relDiffs), axis=0)}")
 
-
-plt.plot(absDiffs[:, 0], label="y0")
-plt.plot(absDiffs[:, 1], label="y1")
-plt.plot(absDiffs[:, 2], label="y2")
-plt.plot(absDiffs[:, 3], label="y3")
-plt.plot(absDiffs[:, 4], label="y4")
+x = range(len(diffs))
+plt.scatter(x, diffs[:, 0], label="L1", marker='_')
+plt.scatter(x, diffs[:, 1], label="L2", marker='_')
+plt.scatter(x, diffs[:, 2], label="L3", marker='_')
+plt.scatter(x, diffs[:, 3], label="L4", marker='_')
+plt.scatter(x, diffs[:, 4], label="L5", marker='_')
+plt.legend()
 plt.title("Differences between Predictions and Ground Truth Force")
-plt.xlabel("Sample Index")
+plt.xlabel("Sample/patient Index")
 plt.ylabel("Force Difference")
+plt.xlim(0, 20)  # limit x-axis to number of samples
+plt.legend()
+plt.show()
+
+plt.figure(figsize=(12, 8))
+x = range(len(diffs))
+plt.plot(x, gts[:, 0], label="L1 ground truth", color="tab:blue")
+plt.plot(x, preds[:, 0], label="L1 prediction", color="tab:blue", linestyle='--')
+plt.plot(x, gts[:, 1], label="L2 ground truth", color="tab:orange")
+plt.plot(x, preds[:, 1], label="L2 prediction", color="tab:orange", linestyle='--')
+plt.plot(x, gts[:, 2], label="L3 ground truth", color="tab:green")
+plt.plot(x, preds[:, 2], label="L3 prediction", color="tab:green", linestyle='--')
+plt.legend()
+plt.title("Ground Truth vs Predictions for L1, L2, L3")
+plt.xlabel("Sample/Patient Index")
+plt.ylabel("Force")
+plt.xlim(0, 30)  # limit x-axis to number of samples
 plt.legend()
 plt.show()
 
 #%% plot it as histogram 
+# Reshape data for violin plot
+violin_data = pd.DataFrame()
+for i in range(5):
+    temp_df = pd.DataFrame({
+        'Force Difference': relDiffs[:, i] * 100,
+        'Variable': f'L{i+1}'
+    })
+    violin_data = pd.concat([violin_data, temp_df])
 
+# Create the violin plot
+plt.figure(figsize=(12, 6))
+sns.violinplot(x='Variable', y='Force Difference', data=violin_data)
+plt.title("Violin Plot of Differences between Predictions and Ground Truth Force")
+plt.xlabel("Variable")
+plt.ylabel("Force Difference in %")
+plt.grid(axis='y', linestyle='--', alpha=0.7)
+plt.show()
 
 #%% SAVE CSV AND PRINT METRICS
-cols_y = [f"y{i}" for i in range(OUT_FEATURES)]
+cols_y = [f"L{i+1}" for i in range(OUT_FEATURES)]
 cols_p = [f"pred_{i}" for i in range(OUT_FEATURES)]
 
 out_df = pd.DataFrame({"nifti_path": [m["nifti_path"] for m in metas]})
