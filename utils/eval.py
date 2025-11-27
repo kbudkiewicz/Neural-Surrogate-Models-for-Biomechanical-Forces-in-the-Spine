@@ -165,7 +165,7 @@ def plot_metric(metric: Callable, eval_file: str, title: Optional[str] = None, p
     tick_labels = df.columns.str.replace(metric.__name__ + '-', '')
 
     plt.figure(figsize=(df.shape[-1] // 6, 6))
-    plt.boxplot(df.values, tick_labels=tick_labels)
+    plt.boxplot(df.values, tick_labels=tick_labels, meanline=True, showmeans=True)
     plt.ylabel(metric.__name__)
     if 'rel' in metric.__name__:
         # lower, upper = max(0, df.min().min()), min(2, df.max().max())
