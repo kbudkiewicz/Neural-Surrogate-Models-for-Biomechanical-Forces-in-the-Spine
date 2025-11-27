@@ -37,30 +37,26 @@ def get_yout(path: str) -> dict:
     return {**data_dict['yout'], **data_dict['forceOv']}
 
 
-# def mat_to_npz(path: str, task: str, datapath: str, dataname: str = 'allResults.npz'):
-#     """Save results to a npz file."""
-#     results_dict = {path: get_yout(os.path.join(datapath, path))}
-#     dataname, extension = os.path.splitext(dataname)
-#     dataname = dataname + '_' + task + extension
-#     np.savez(os.path.join(datapath, dataname), **results_dict)
-
-
-def generate_npz(datapath: str = os.curdir, npz_filename: str = 'default.npz', n: Optional[int] = None):
+def generate_npz(n: int, npz_filename: str, datapath: str = os.curdir, tasks: Optional[list] = None):
     """
+    n (int): number of samples to save in .npz.
     datapath (str, optional): Absolute path to directory containing .mat files.
     """
     results_dict = {}
     print(f'Finding paths along {datapath}...')
-    paths = get_available_paths(*AVAILABLE_TASKS, datapath=datapath)
+    if tasks is None:
+        tasks = AVAILABLE_TASKS
+    paths = get_available_paths(*tasks, datapath=datapath)
+    npz_path = os.path.join(datapath, npz_filename)
     for idx, path in enumerate(paths):
         if idx == n:
             break
         filepath = os.path.join(datapath, path)
         print(f'{idx}: {filepath}')
         results_dict[path] = get_yout(filepath)
-    # npz_filename, extension = os.path.splitext(npz_filename)
-    # npz_filename = npz_filename + '_' + tasks + extension
-    np.savez(os.path.join(datapath, npz_filename), **results_dict)
+    np.savez(npz_path, **results_dict)
+    print(f'DONE: {npz_filename} saved along {npz_filename}.')
+    del results_dict
 
 
 # --- CSV manipulation ---

@@ -11,18 +11,18 @@ pathDataset: str = '/mnt/derivatives/'
 SCALARS: tuple = 'compr', 'shear', 'muscles', 'Ang'
 
 
-def create_csv(csv_name: str, npz_file: str, n: int, tasks: list[str] = None):
+def create_csv(csv_name: str, npz_filename: str, n: int, tasks: list[str] = None):
     """
     Args:
         csv_name (str): name of the csv file to which the data is saved.
-        npz_file (str): name of the npz file from which matlab structs are loaded.
+        npz_filename (str): name of the npz file from which matlab structs are loaded.
         n (int): number of samples contained in the csv file.
         tasks (list[str]): list of tasks. Must contain string literals.
     """
-    pathNpz = os.path.join(pathMatfiles, npz_file)
+    pathNpz = os.path.join(pathMatfiles, npz_filename)
     if not os.path.exists(pathNpz):
-        print(f'{pathNpz} does not exist! Generating {npz_file}...')
-        generate_npz(datapath=pathMatfiles, n=n)
+        print(f'{pathNpz} does not exist! Generating {npz_filename}...')
+        generate_npz(n=n, npz_filename=npz_filename, datapath=pathMatfiles, tasks=tasks)
         print('Done.')
 
     npz_dict = npz_to_dict(pathNpz)
@@ -68,8 +68,8 @@ def create_csv(csv_name: str, npz_file: str, n: int, tasks: list[str] = None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--csv_file', required=True, type=str, default='default.csv')
-    parser.add_argument('--npz_file', required=False, type=str, default='default.npz')
+    parser.add_argument('--csv_filename', required=True, type=str, default='default.csv')
+    parser.add_argument('--npz_filename', required=False, type=str, default='default.npz')
     parser.add_argument('-s', '--samples', required=False, type=int, default=1000)
     parser.add_argument('-t', '--tasks', required=False, nargs='*', type=str)
     args = parser.parse_args()
