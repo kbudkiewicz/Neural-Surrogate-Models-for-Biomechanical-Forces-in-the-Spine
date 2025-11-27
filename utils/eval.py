@@ -43,7 +43,7 @@ def remove_zeros(x: np.array) -> np.array:
 
 @torch.no_grad()
 def calculate_metrics(*metrics: Callable, model: Module, loader: DataLoader, device):
-    expected_shape = l, bs, dim = len(loader), loader.batch_size, loader.dataset.dim
+    expected_shape = loader_length, batch_size, dim = len(loader), loader.batch_size, loader.dataset.dim
     loader = wrap_dataloader(loader, 'Evaluation')
     model.eval()
 
@@ -52,20 +52,24 @@ def calculate_metrics(*metrics: Callable, model: Module, loader: DataLoader, dev
         d[metric.__name__] = np.empty(expected_shape)
 
     for i, batch in enumerate(loader):
-        img, target = batch
+        img, target, conditioning = batch
         img, target = img.to(device), target.to(device)
-        preds = model(img)
+        if conditioning is not None:
+            conditioning = conditioning.to(device)
+            preds = model(img, conditioning)
+        else:
+            preds = model(img)
 
         for metric in metrics:
             value = metric(preds, target)
             if value.size() != torch.Size([*expected_shape[1:]]):
-                delta = abs(bs - value.shape[0])
+                delta = abs(batch_size - value.shape[0])
                 value = torch.cat([value, torch.zeros([delta, dim], device=device)], dim=0)
             d[metric.__name__][i] = value.numpy(force=True)
 
     for metric in metrics:
         value = d[metric.__name__]
-        d[metric.__name__] = remove_zeros(value.reshape(l * bs, dim))
+        d[metric.__name__] = remove_zeros(value.reshape(loader_length * batch_size, dim))
 
     return d
 
