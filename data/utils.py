@@ -120,7 +120,7 @@ def unpack_scalar_from_dict(v, scalar) -> Tuple[str, np.array]:
     return remove_prefix(scalar), value
 
 
-def get_pat_ses(x: str) -> Tuple[str, str, float]:
+def get_pat_ses(x: str) -> Tuple[str, str, float, str]:
     """
     Retrieve patient, session, and weight information from filename. If no weight is specified in the filename, the
     weight saved in the CSV will default to 0.0.
@@ -135,7 +135,7 @@ def get_pat_ses(x: str) -> Tuple[str, str, float]:
         weight = float(t)
     else:
         weight = 0.0
-    return patient, ses, weight
+    return patient, ses, weight, task
 
 
 def get_img_paths(folder: str) -> str:
