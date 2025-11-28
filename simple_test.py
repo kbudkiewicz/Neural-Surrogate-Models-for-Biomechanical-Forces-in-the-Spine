@@ -7,7 +7,7 @@ import wandb
 
 from nn.networks import ResNet3DRegressor, MultilayerPerceptron, Chimera
 from data.datasets import CTDataset, ShearComprDataset, MuscleDataset, AllForcesDataset, ForceToForceDataset
-from data.utils import check_if_file_exists
+from data.utils import prepare_dirs
 from utils.eval import evaluate, relative_error, absolute_error
 from utils.preprocessing import wrap_dataloader, tensor_to_dict, get_splits
 from torch.utils.data import DataLoader
@@ -85,9 +85,7 @@ def main():
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=16)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, num_workers=16)
     target_cols = train_dataset.target_cols
-    eval_name = os.path.join('./data/eval_chimera', train_dataset.name, 'eval.csv')
-    model_name = os.path.join(os.path.dirname(eval_name), train_dataset.name + '.pth')
-    model_name = check_if_file_exists(model_name)
+    eval_name, model_name = prepare_dirs('./data/eval_chimera', train_dataset.name)
     best_loss = float('inf')
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
