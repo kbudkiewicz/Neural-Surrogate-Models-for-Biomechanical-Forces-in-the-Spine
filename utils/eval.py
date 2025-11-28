@@ -129,27 +129,35 @@ def evaluate(
     save_as_csv(metrics, nifti_paths=nifti_paths, target_cols=target_cols, csv_filename=csv_filename)
 
 
-def print_mean_std(csv_filename: str, keyword: str, stack: bool = False):
+def make_regex(strings: Iterable[str]) -> str:
+    regex = ''
+    for string in strings:
+        regex += f'(?=.*{string})'
+    return regex
+
+
+def print_mean_std(csv_filename: str, keywords: str, stack: bool = False):
     """
     Args:
         csv_filename: path to eval.csv
-        keyword: regular expression containing the metric name to be printed.
-        stack: If True, check for columns where the keyword is present via regex. Then stack all those columns, and
+        keywords: regular expression containing keywords. Only columns containing all keywords will be printed.
+        stack: If ``True``, check for columns where the keyword is present via regex. Then stack all those columns, and
             calculate a common mean and standard deviation.
     """
     if not os.path.isfile(csv_filename):
         raise FileNotFoundError(f'{csv_filename} cannot be found.')
     df = pd.read_csv(csv_filename)
-    columns_with_keyword = df.columns.str.contains(keyword)
+    keywords = make_regex(keywords)
+    columns_with_keyword = df.columns.str.contains(keywords)
     if not columns_with_keyword.any() == True:
-        print(f'WARNING: {csv_filename} does not contain regex "{keyword}".')
+        print(f'WARNING: {csv_filename} does not contain regex "{keywords}".')
         return False
     valid_cols = df.columns[columns_with_keyword].values
     df = df[valid_cols]
 
     if stack:
         df = df.stack()
-        print(f'\t{keyword}: \t{df.median():.2f} with {df.mean():.2f}+-{df.std():.2f}')
+        print(f'\t{keywords}: \t{df.median():.2f} with {df.mean():.2f}+-{df.std():.2f}')
     else:
         for column_name in valid_cols:
             df_slice = df[column_name]
