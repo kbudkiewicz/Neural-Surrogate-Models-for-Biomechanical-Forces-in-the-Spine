@@ -4,7 +4,7 @@ import nibabel as nib
 import torch
 import torch.nn.functional as F
 
-from typing import Tuple
+from typing import Tuple, Union
 from torch import Tensor
 from torch.utils.data import Dataset
 
@@ -17,8 +17,15 @@ class BaseDataset(Dataset):
             self.df = df.reset_index(drop=True)
         self.target_cols =  self.get_targets(target_cols)
         self.cond_cols = self.get_targets('Ang|weight')
-        self.dim = len(self.target_cols)
         self.augment = augment
+
+    @property
+    def dim(self) -> int:
+        return len(self.target_cols)
+
+    @property
+    def name(self) -> str:
+        return self.__class__.__name__.lower().replace('dataset', '')
 
     @staticmethod
     def _normalize(x: np.array) -> Tensor:
@@ -48,6 +55,15 @@ class BaseDataset(Dataset):
             v = v + 0.01 * torch.randn_like(v)
         return v
 
+    def _mask_df(self, key: str, condition, negative: bool = False, inplace: bool = False) -> Union[None, pd.DataFrame]:
+        mask = (self.df[key].values == condition)
+        df = self.df[~mask] if negative else self.df[mask]
+        df.reset_index(drop=True, inplace=True)
+        if inplace:
+            self.df = df
+        else:
+            return df
+
     def get_targets(self, regex: str) -> pd.Index:
         """Find columns fitting a regex pattern"""
         header = self.df.columns
@@ -72,7 +88,10 @@ class BaseDataset(Dataset):
     def __getitem__(self, idx: int) -> Tuple[Tensor, ...]:
         img, row = self.import_img(idx)
         target = torch.tensor(row[self.target_cols].values.astype(np.float32))
-        conditioning = torch.tensor(row[self.cond_cols].values.astype(np.float32))
+        try:
+            conditioning = torch.tensor(row[self.cond_cols].values.astype(np.float32))
+        except KeyError:
+            conditioning = None
         return img, target, conditioning
 
     def __len__(self):
