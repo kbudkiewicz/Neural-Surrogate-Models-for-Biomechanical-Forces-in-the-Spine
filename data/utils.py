@@ -1,6 +1,7 @@
 import os
 import h5py
 import numpy as np
+import pandas as pd
 from typing import Tuple, Optional
 
 # see Tanja's presentation for more details:
@@ -84,6 +85,29 @@ def generate_npz(n: int, npz_filename: str, datapath: str = os.curdir, tasks: Op
     del results_dict
 
 
+# --- .sto ---
+def clean_sto_line(line: str) -> list[str]:
+    return line.replace('\n', '').strip().split('\t')
+
+
+def read_sto(path: str) -> pd.DataFrame:
+    with open(path, 'r') as f:
+        start_recording = False
+        for i, line in enumerate(f):
+            if start_recording and 'time' not in line:
+                line = clean_sto_line(line)
+                values = list(map(float, line))
+                if values is not None:
+                    values = pd.DataFrame([values], columns=header)
+                    df = pd.concat([df, values])
+            if 'time' in line:
+                header = clean_sto_line(line)
+                df = pd.DataFrame(data=None, columns=pd.Series(header))
+                start_recording = True
+        df = df.drop(columns=['time']).mean().to_frame().T
+    return df
+
+
 # --- CSV manipulation ---
 def npz_to_dict(path: str) -> dict:
     print(f'Loading "{path}" to dict...')
@@ -138,12 +162,15 @@ def get_pat_ses(x: str) -> Tuple[str, str, float, str]:
     return patient, ses, weight, task
 
 
-def get_img_paths(folder: str) -> str:
-    """Find ct nifti files"""
+def get_img_paths(folder: str, pattern: str = 'ct.nii.gz') -> str:
+    """Find a file in folder that contains a pattern.
+
+    .. note:: Set ``pattern`` to 'ct.nii.gz' for nifti and 'T2w.nii.gz' for nako
+    """
     try:
-        ct_images = [f for f in os.listdir(folder) if "ct.nii.gz" in f]
-        if not len(ct_images) == 1:
-            print(f"Expected one CT image, found {len(ct_images)} in {folder}")
-        return os.path.join(folder, ct_images[0])
+        images = [file for file in os.listdir(folder) if pattern in file]
+        if not len(images) == 1:
+            print(f"Expected one image, found {len(images)} in {folder}")
+        return os.path.join(folder, images[0])
     except FileNotFoundError:
         raise FileNotFoundError(f"No ct.nii.gz files found along {folder}")
