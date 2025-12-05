@@ -91,7 +91,7 @@ class BaseDataset(Dataset):
         try:
             conditioning = torch.tensor(row[self.cond_cols].values.astype(np.float32))
         except KeyError:
-            conditioning = None
+            conditioning = torch.nan
         return img, target, conditioning
 
     def __len__(self):
@@ -123,13 +123,13 @@ class AllForcesDataset(BaseDataset):
 
 
 class ForceToForceDataset(BaseDataset):
-    """For training MLP: shear and compression -> muscle forces"""
+    """For training an MLP: shear and compression -> muscle forces"""
     def __init__(self, df, target_cols='compr|shear'):
         super().__init__(df, target_cols)
         self.input_cols = self.get_targets('G_|F_Ribcage')    # muscle forces
 
-    def __getitem__(self, idx: int) -> Tuple[Tensor, Tensor]:
+    def __getitem__(self, idx: int) -> Tuple[Tensor, Tensor, torch.nan]:
         row = self.df.iloc[idx]
         input_ = torch.tensor(row[self.input_cols].values.astype(np.float32))
         target = torch.tensor(row[self.target_cols].values.astype(np.float32))
-        return input_, target
+        return input_, target, torch.nan

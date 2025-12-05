@@ -22,7 +22,7 @@ def train_one_epoch(model, loader, optimizer, device, criterion, epoch, epochs, 
     for batch in loader_wrap:
         imgs, targets, conditioning = batch
         imgs, targets = imgs.to(device), targets.to(device)
-        if conditioning is not None:
+        if conditioning is torch.nan:
             conditioning = conditioning.to(device)
             preds = model(imgs, conditioning)
         else:
@@ -50,7 +50,7 @@ def validate(model, loader, device, criterion, epoch, epochs, target_cols):
         for batch in loader_wrap:
             imgs, targets, conditioning = batch
             imgs, targets = imgs.to(device), targets.to(device)
-            if conditioning is not None:
+            if conditioning is torch.nan:
                 conditioning = conditioning.to(device)
                 preds = model(imgs, conditioning)
             else:
