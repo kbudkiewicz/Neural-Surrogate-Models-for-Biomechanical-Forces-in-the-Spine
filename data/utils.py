@@ -13,11 +13,13 @@ VALS_OF_INTEREST: tuple = 'shear', 'compr', 'muscle', 'Ang'
 def rename_if_exists(path: str) -> str:
     idx = 0
     basename = os.path.basename(path)
-    _, extension = os.path.splitext(basename)
     dirname = os.path.dirname(path)
-    a = os.path.exists(path)
+    filename, extension = os.path.splitext(basename)
     while os.path.exists(path):
-        path = os.path.join(dirname, basename + f'_{idx}' + extension)
+        if os.path.isdir(path):
+            path = os.path.join(dirname, basename + f'_{idx}')
+        elif os.path.isfile(path):
+            path = os.path.join(dirname, filename + f'_{idx}' + extension)
         idx += 1
     return path
 
@@ -26,12 +28,13 @@ def prepare_dirs(eval_path: str, dataset_name: str, eval_name: str = 'eval.csv')
     eval_path = os.path.join(eval_path, dataset_name)
     if not os.path.isdir(eval_path):
         print(f'Path "{eval_path}" does not exist. Creating directory...')
-        os.mkdir(eval_path)
-    else:
-        eval_path = rename_if_exists(eval_path)
-        os.mkdir(eval_path)
+        os.makedirs(eval_path)
+    # else:
+    #     eval_path = rename_if_exists(eval_path)
+    #     os.mkdir(eval_path)
     eval_name = os.path.join(eval_path, eval_name)
     model_name = os.path.join(eval_path, dataset_name + '.pth')
+    model_name = rename_if_exists(model_name)
     return eval_name, model_name
 
 
@@ -91,9 +94,9 @@ def clean_sto_line(line: str) -> list[str]:
 
 
 def read_sto(path: str) -> pd.DataFrame:
-    with open(path, 'r') as f:
+    with open(path, 'r') as file:
         start_recording = False
-        for i, line in enumerate(f):
+        for line in file:
             if start_recording and 'time' not in line:
                 line = clean_sto_line(line)
                 values = list(map(float, line))
