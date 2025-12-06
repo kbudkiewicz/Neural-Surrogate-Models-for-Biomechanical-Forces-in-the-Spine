@@ -1,5 +1,16 @@
+.venv
 wandb/*
+
+# formats
 *.npz
 *.pyc
-__pycache__/*
 *.pth
+*.mat
+*.xml
+*.csv
+
+# folders
+__pycache__/*
+/tests
+*/eval*
+/data/derivatives-sim
