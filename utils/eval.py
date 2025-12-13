@@ -54,7 +54,7 @@ def calculate_metrics(*metrics: Callable, model: Module, loader: DataLoader, dev
     for i, batch in enumerate(loader):
         img, target, conditioning = batch
         img, target = img.to(device), target.to(device)
-        if conditioning is not None:
+        if torch.isnan(conditioning).any() is True:
             conditioning = conditioning.to(device)
             preds = model(img, conditioning)
         else:
@@ -83,7 +83,7 @@ def make_col_names(metric: np.array, target_col: pd.Index, label: str) -> pd.Ind
 
 def save_as_csv(
     metrics: dict[str, np.ndarray],
-    nifti_paths: pd.DataFrame,
+    data_paths: pd.DataFrame,
     target_cols: pd.Index,
     csv_filename: str,
 ) -> None:
@@ -96,9 +96,9 @@ def save_as_csv(
             df = dff
         else:
             df = df.join(dff)
-    if len(nifti_paths) != len(df):
-        nifti_paths = nifti_paths[:len(df)]
-        df = pd.concat([nifti_paths, df], axis=1)
+    if len(data_paths) != len(df):
+        data_paths = data_paths[:len(df)]
+        df = pd.concat([data_paths, df], axis=1)
     df.index.name = 'id'
 
     try:
@@ -124,9 +124,9 @@ def evaluate(
     if weights:
         import_weights(model, weights, device=device)
     target_cols = loader.dataset.target_cols
-    nifti_paths = loader.dataset.df['nifti_path']
+    data_paths = loader.dataset.df[loader.dataset.paths_key]
     metrics = calculate_metrics(*metrics, model=model, loader=loader, device=device)
-    save_as_csv(metrics, nifti_paths=nifti_paths, target_cols=target_cols, csv_filename=csv_filename)
+    save_as_csv(metrics, data_paths=data_paths, target_cols=target_cols, csv_filename=csv_filename)
 
 
 def make_regex(strings: Iterable[str]) -> str:
@@ -157,11 +157,11 @@ def print_mean_std(csv_filename: str, keywords: str, stack: bool = False):
 
     if stack:
         df = df.stack()
-        print(f'\t{keywords}: \t{df.median():.2f} with {df.mean():.2f}+-{df.std():.2f}')
+        print(f'{keywords}: {df.median():16.2f} with {df.mean():.2f}+-{df.std():.2f}')
     else:
         for column_name in valid_cols:
             df_slice = df[column_name]
-            print(f'{column_name}: \t{df_slice.median():.2f} with {df_slice.mean():.2f}+-{df_slice.std():.2f}')
+            print(f'{column_name}: {df_slice.median():16.2f} with {df_slice.mean():.2f}+-{df_slice.std():.2f}')
 
 
 # --- Plotting ---
