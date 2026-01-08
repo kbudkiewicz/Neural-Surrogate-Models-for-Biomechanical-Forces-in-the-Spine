@@ -165,12 +165,31 @@ def print_mean_std(csv_filename: str, keywords: str, stack: bool = False):
 
 
 # --- Plotting ---
-def plot_metric(metric: Callable, eval_file: str, title: Optional[str] = None, plot_name: Optional[str] = None):
+def plot_metric(
+    metric: Callable,
+    eval_file: str,
+    stack: Optional[Iterable[str]] = None,
+    title: Optional[str] = None,
+    plot_name: Optional[str] = None
+):
     df = pd.read_csv(eval_file)
     header = df.columns
     cols = header[header.str.contains(metric.__name__)]
-    df = df[cols]
-    tick_labels = df.columns.str.replace(metric.__name__ + '-', '')
+    if cols.empty:
+        raise KeyError(f'{eval_file} does not contain metric {metric.__name__}.')
+
+    if isinstance(stack, Iterable):
+        temp_df = pd.DataFrame([], columns=pd.Index(stack))
+        for regex in stack:
+            c = cols[cols.str.contains(regex, regex=True)]
+            temp_df[regex] = df[c].values.ravel()
+        df = temp_df
+        if df.isna().any().any():
+            raise ValueError(f'NaN values in {eval_file}.')
+        tick_labels = stack
+    else:
+        df = df[cols]
+        tick_labels = df.columns.str.replace(metric.__name__ + '-', '')
 
     plt.figure(figsize=(df.shape[-1] // 6, 6))
     plt.boxplot(df.values, tick_labels=tick_labels, meanline=True, showmeans=True)
@@ -182,7 +201,8 @@ def plot_metric(metric: Callable, eval_file: str, title: Optional[str] = None, p
         plt.yscale('log')
         plt.ylabel(f'Log {metric.__name__}')
     plt.xticks(rotation=90)
-    plt.title('Dataset: ' + title)
+    if title is not None:
+        plt.title('Dataset: ' + title)
     plt.tight_layout()
 
     if plot_name:
