@@ -191,15 +191,17 @@ def plot_metric(
         df = df[cols]
         tick_labels = df.columns.str.replace(metric.__name__ + '-', '')
 
-    plt.figure(figsize=(df.shape[-1] // 6, 6))
+    plt.figure(figsize=(max(df.shape[-1] // 6, 4), 6))
     plt.boxplot(df.values, tick_labels=tick_labels, meanline=True, showmeans=True)
     plt.ylabel(metric.__name__)
-    if 'rel' in metric.__name__:
+    if metric.__name__ == 'relative_error':
         # lower, upper = max(0, df.min().min()), min(2, df.max().max())
-        plt.ylim([0, 0.4])
-    if 'abs' in metric.__name__:
+        plt.ylim([0, 2])
+    elif metric.__name__ == 'absolute_error':
         plt.yscale('log')
         plt.ylabel(f'Log {metric.__name__}')
+    else:
+        pass
     plt.xticks(rotation=90)
     if title is not None:
         plt.title('Dataset: ' + title)
