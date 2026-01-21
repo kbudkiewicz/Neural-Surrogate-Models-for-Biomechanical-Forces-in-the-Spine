@@ -35,13 +35,11 @@ def create_csv_from_sto(root: str, csv_name: str, desired: str = 'inverse_dynami
                     nako_msk = nako_file.replace(data_path, segmentation_path).replace('/T2w', '/vibe')
                     vibe_inphase = nako_msk.replace("-sag_T2w.nii.gz", "-ax_part-inphase_vibe.nii.gz")
                     vibe_outphase = nako_msk.replace("-sag_T2w.nii.gz", "-ax_part-outphase_vibe.nii.gz")
-                    print(f'Checking {nako_file}...')
+                    nii_paths = [nako_file, vibe_inphase, vibe_outphase]
 
-                    # Load nako files
-                    check_nii_file(nako_file)
-                    check_nii_file(vibe_inphase)
-                    check_nii_file(vibe_outphase)
-
+                    for nii_path in nii_paths:
+                        check_nii_file(nii_path)
+                    
                     # add values to existing DataFrame
                     sto['nako_path'] = os.path.abspath(nako_file)
                     df = pd.concat([df, sto])
@@ -99,9 +97,11 @@ def create_csv_from_npz(csv_name: str, npz_filename: str, n: int, tasks: list[st
             # Load the NIfTI files
             tissue_msk_path = ctImgPath.replace("_ct.nii.gz", "_seg-tissue_msk.nii.gz")
             spine_msk_path = ctImgPath.replace("_ct.nii.gz", "_seg-spine_msk.nii.gz")
-            check_nii_file(ctImgPath)
-            check_nii_file(tissue_msk_path)
-            check_nii_file(spine_msk_path)
+            nii_paths = [ctImgPath, tissue_msk_path, spine_msk_path]
+
+            for nii_path in nii_paths:
+                check_nii_file(nii_path)
+
             # save as a dict
             temp['task'] = current_task
             temp['nifti_path'] = ctImgPath
