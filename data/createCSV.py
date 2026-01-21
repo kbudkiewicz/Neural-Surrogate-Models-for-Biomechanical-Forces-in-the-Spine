@@ -8,14 +8,18 @@ from utils import npz_to_dict, get_pat_ses, get_img_paths, generate_npz, get_sca
 SCALARS: tuple = 'compr', 'shear', 'muscles', 'Ang'
 
 
+def check_nii_file(path: str) -> None:
+    img = nib.load(path, mmap=False)
+    _ = img.get_fdata().shape
+
+
 def create_csv_from_sto(root: str, csv_name: str, desired: str = 'inverse_dynamics.sto'):
     """Save data from sto_files along a given root directory to a csv file.
 
     .. note:: data and segmentation paths below are symbolic links to the datasets.
     """
     # data_path = segmentation_path = './'  # DEBUG
-    segmentation_path = 'nako_msk'
-    data_path = 'nako_data'
+    data_path = segmentation_path = './derivatives-sim/rawdata_stitched'
     df = pd.DataFrame([])
 
     # find all files containing desired along root
@@ -27,17 +31,16 @@ def create_csv_from_sto(root: str, csv_name: str, desired: str = 'inverse_dynami
                 nako_data = data_path + suffix
 
                 if os.path.exists(nako_data):
-                    nako_file = get_img_paths(nako_data)
-                    nako_msk = nako_file.replace(data_path, segmentation_path)
+                    nako_file = get_img_paths(nako_data, 'T2w.nii.gz')
+                    nako_msk = nako_file.replace(data_path, segmentation_path).replace('/T2w', '/vibe')
+                    vibe_inphase = nako_msk.replace("-sag_T2w.nii.gz", "-ax_part-inphase_vibe.nii.gz")
+                    vibe_outphase = nako_msk.replace("-sag_T2w.nii.gz", "-ax_part-outphase_vibe.nii.gz")
                     print(f'Checking {nako_file}...')
 
                     # Load nako files
-                    img = nib.load(nako_file, mmap=False)
-                    _ = img.get_fdata().shape
-                    img = nib.load(nako_msk.replace("_T2w.nii.gz", "_mod-T2w_seg-spine_msk.nii.gz"), mmap=False)
-                    _ = img.get_fdata().shape
-                    img = nib.load(nako_msk.replace("_T2w.nii.gz", "_mod-T2w_seg-vert_msk.nii.gz"), mmap=False)
-                    _ = img.get_fdata().shape
+                    check_nii_file(nako_file)
+                    check_nii_file(vibe_inphase)
+                    check_nii_file(vibe_outphase)
 
                     # add values to existing DataFrame
                     sto['nako_path'] = os.path.abspath(nako_file)
@@ -47,7 +50,7 @@ def create_csv_from_sto(root: str, csv_name: str, desired: str = 'inverse_dynami
             except OSError:
                 raise
             except EOFError:
-                print(f"ERROR: Corrupted image along {nako_data}.")
+                print(f"EOFError: Corrupted image along {nako_file}")
                 continue
 
     print(f'Saving {csv_name}...')
@@ -94,12 +97,11 @@ def create_csv_from_npz(csv_name: str, npz_filename: str, n: int, tasks: list[st
 
         try:
             # Load the NIfTI files
-            img = nib.load(ctImgPath, mmap=False)
-            _ = img.get_fdata().shape
-            img = nib.load(ctImgPath.replace("_ct.nii.gz", "_seg-tissue_msk.nii.gz"), mmap=False)
-            _ = img.get_fdata().shape
-            img = nib.load(ctImgPath.replace("_ct.nii.gz", "_seg-spine_msk.nii.gz"), mmap=False)
-            _ = img.get_fdata().shape
+            tissue_msk_path = ctImgPath.replace("_ct.nii.gz", "_seg-tissue_msk.nii.gz")
+            spine_msk_path = ctImgPath.replace("_ct.nii.gz", "_seg-spine_msk.nii.gz")
+            check_nii_file(ctImgPath)
+            check_nii_file(tissue_msk_path)
+            check_nii_file(spine_msk_path)
             # save as a dict
             temp['task'] = current_task
             temp['nifti_path'] = ctImgPath
