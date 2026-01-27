@@ -19,6 +19,14 @@ def absolute_error(pred: Tensor, target: Tensor) -> Tensor:
     return torch.abs(target - pred)
 
 
+def absolute_error_by_std(pred: Tensor, target: Tensor, std) -> Tensor:
+    return torch.abs(target - pred) / (std + 1e-8)
+
+
+# def mean_absolute_deviation(pred: Tensor, target: Tensor) -> Tensor:
+#     return torch.abs(pred - torch.mean(target)) / len(target)
+
+
 # def mse(pred: Tensor, target: Tensor) -> Tensor:
 #     return torch.square(target - pred) / (torch.square(target) + 1e-8)
 #
@@ -44,24 +52,27 @@ def remove_zeros(x: np.array) -> np.array:
 @torch.no_grad()
 def calculate_metrics(*metrics: Callable, model: Module, loader: DataLoader, device):
     expected_shape = loader_length, batch_size, dim = len(loader), loader.batch_size, loader.dataset.dim
+    std = loader.dataset.std
+    std = std.to(device)
     loader = wrap_dataloader(loader, 'Evaluation')
     model.eval()
 
-    d = {}
-    for metric in metrics:
-        d[metric.__name__] = np.empty(expected_shape)
+    d = {metric.__name__: np.empty(expected_shape) for metric in metrics}
 
     for i, batch in enumerate(loader):
         img, target, conditioning = batch
         img, target = img.to(device), target.to(device)
-        if torch.isnan(conditioning).any() is True:
+        if conditioning.isnan().any():
+            preds = model(img)
+        else:
             conditioning = conditioning.to(device)
             preds = model(img, conditioning)
-        else:
-            preds = model(img)
 
         for metric in metrics:
-            value = metric(preds, target)
+            if metric.__name__ == 'absolute_error_by_std':
+                value = metric(preds, target, std)
+            else:
+                value = metric(preds, target)
             if value.size() != torch.Size([*expected_shape[1:]]):
                 delta = abs(batch_size - value.shape[0])
                 value = torch.cat([value, torch.zeros([delta, dim], device=device)], dim=0)
@@ -148,8 +159,8 @@ def print_mean_std(csv_filename: str, keywords: str, stack: bool = False):
         raise FileNotFoundError(f'{csv_filename} cannot be found.')
     df = pd.read_csv(csv_filename)
     keywords = make_regex(keywords)
-    columns_with_keyword = df.columns.str.contains(keywords)
-    if not columns_with_keyword.any() == True:
+    columns_with_keyword = df.columns.str.contains(keywords, regex=True)
+    if not columns_with_keyword.any():
         print(f'WARNING: {csv_filename} does not contain regex "{keywords}".')
         return False
     valid_cols = df.columns[columns_with_keyword].values
