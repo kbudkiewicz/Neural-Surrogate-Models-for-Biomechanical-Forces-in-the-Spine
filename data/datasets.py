@@ -205,6 +205,13 @@ class NakoBase(BaseDataset):
         path = path.replace(tail, 'segmentation.nii.gz')
         return path
 
+    @staticmethod
+    def load_nifti(x: NII) -> Tensor:
+        x = x.get_array()
+        x = np.nan_to_num(x, nan=0.0, posinf=0.0, neginf=0.0)
+        x = torch.tensor(x, dtype=torch.float).unsqueeze(0)
+        return x
+
     def preprocess_image(self, x: NII) -> Tensor:
         """Convert a NIFTI image into a tensor.
 
