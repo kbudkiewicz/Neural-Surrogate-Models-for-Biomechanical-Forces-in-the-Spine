@@ -200,7 +200,7 @@ class NakoBase(BaseDataset):
 
     @staticmethod
     def _get_vibe_mask_path(path: str) -> str:
-        path = path.replace('/rawdata_stitched', '/derivatives-Abdominal-Segmentation')
+        path = path.replace('/rawdata_stitched', '/derivatives_Abdominal-Segmentation')
         _, tail = os.path.split(path)
         path = path.replace(tail, 'segmentation.nii.gz')
         return path
