@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 
 from typing import Tuple, Optional, Union, Iterable, Callable
 from utils.preprocessing import wrap_dataloader
+from data.utils import rename_if_exists
 from torch import Tensor
 from torch.nn import Module
 from torch.utils.data import DataLoader
@@ -113,6 +114,7 @@ def save_as_csv(
     df.index.name = 'id'
 
     try:
+        csv_filename = rename_if_exists(csv_filename)
         df.to_csv(csv_filename, index=True)
     except OSError as e:
         print(e)
