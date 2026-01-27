@@ -218,7 +218,7 @@ class NakoBase(BaseDataset):
         .. note::
             ``NII`` or ``Nifti1Images`` cannot be converted to tensor directly and must be first cast to np.array.
         """
-        x = torch.tensor(x.get_array(), dtype=torch.float).unsqueeze(0)
+        x = self.load_nifti(x)
         x = self._interpolate(x)
         x = self._normalize(x)
         if self.augment:
@@ -226,7 +226,7 @@ class NakoBase(BaseDataset):
         return x
 
     def preprocess_segmentation(self, x: NII) -> Tensor:
-        x = torch.tensor(x.get_array(), dtype=torch.float).unsqueeze(0)
+        x = self.load_nifti(x)
         x = self._interpolate(x)
         return x
 
