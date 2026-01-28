@@ -224,10 +224,48 @@ def plot_metric(
 
     if plot_name:
         plot_name = os.path.join(os.path.dirname(eval_file), plot_name)
+        plot_name = rename_if_exists(plot_name)
         plt.savefig(plot_name)
     else:
         plt.show()
 
 
+def plot_compare_models(
+    *eval_files: Tuple[str, str],
+    metric: Callable,
+    width: float = 0.3,
+    stack: Optional[Iterable[str]] = None,
+    plot_name: Optional[str] = None,
+) -> None:
+    fig, ax = plt.subplots(figsize=(8, 5))
+    factor = 0
+
+    for file, label in eval_files:
+        offset = width * factor
+        df = pd.read_csv(file).drop(columns='id')
+        df = df.filter(regex=metric.__name__ + '-')
+        # df = remove_outliers(df)
+        if isinstance(stack, Iterable):
+            df = stack_df_columns(df, stack)
+        x = np.arange(len(df.columns))
+        b = ax.bar(x=x + offset, height=df.mean().round(2), width=width, label=label,
+                   yerr=df.std(), ecolor='k', capsize=3)    # error bar kwargs
+        ax.bar_label(b)
+        factor += 1
+
+    ax.set_xticks(x + width, df.columns, rotation=90)
+    plt.ylabel('Mean ' + metric.__name__)
+    plt.ylim(bottom=0)
+    plt.legend(loc='best')  # ncols=len(eval_files))
+    plt.tight_layout()
+
+    if plot_name:
+        plot_name = rename_if_exists(plot_name)
+        plt.savefig(plot_name)
+    else:
+        plt.show()
+
+
+# DEBUG
 # if __name__ == '__main__':
 #     plot_metric('abs_err', '../data/eval/eval.csv', 'test')
