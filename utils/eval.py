@@ -178,6 +178,11 @@ def print_mean_std(csv_filename: str, keywords: str, stack: bool = False):
 
 
 # --- Plotting ---
+def stack_df_columns(df: pd.DataFrame, stack: Iterable[str]) -> pd.DataFrame:
+    """Stack all columns containing the same string or regex in stack to a single column."""
+    return pd.DataFrame({regex: df.filter(regex=regex).values.ravel() for regex in stack})
+
+
 def plot_metric(
     metric: Callable,
     eval_file: str,
@@ -190,18 +195,15 @@ def plot_metric(
     cols = header[header.str.contains(metric.__name__)]
     if cols.empty:
         raise KeyError(f'{eval_file} does not contain metric {metric.__name__}.')
+    df = df[cols]
 
+    # get the desired values from (stacked) columns
     if isinstance(stack, Iterable):
-        temp_df = pd.DataFrame([], columns=pd.Index(stack))
-        for regex in stack:
-            c = cols[cols.str.contains(regex, regex=True)]
-            temp_df[regex] = df[c].values.ravel()
-        df = temp_df
+        df = stack_df_columns(df, stack)
         if df.isna().any().any():
             raise ValueError(f'NaN values in {eval_file}.')
         tick_labels = stack
     else:
-        df = df[cols]
         tick_labels = df.columns.str.replace(metric.__name__ + '-', '')
 
     plt.figure(figsize=(max(df.shape[-1] // 6, 4), 6))
