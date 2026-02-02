@@ -93,22 +93,6 @@ class BaseDataset(Dataset):
         mask = self._interpolate(mask)
         return mask
 
-    def import_img(self, idx: int) -> Tuple[Tensor, pd.DataFrame]:
-        row = self.df.iloc[idx]
-        img = self._load_nifti(row['nifti_path'])
-        img = self._interpolate(img)
-        img = self._normalize(img)
-        if self.augment:
-            img = self._augment(img)
-
-        tissueSeg = self.import_mask(row, "_seg-tissue_msk.nii.gz")
-        spineSeg = self.import_mask(row, "_seg-spine_msk.nii.gz")
-        img = torch.cat([img, tissueSeg, spineSeg], dim=0)  # [3, D, H, W]
-        return img, row
-        # except EOFError:
-        #     print(f"[WARNING] Skipping corrupted file: {row[self.paths_key]}")
-        #     return self.__getitem__((idx + 1) % len(self.df))  # pick next one
-
     def __getitem__(self, idx: int) -> Tuple[Tensor, Tensor, float]:
         selected_row = self.df.iloc[idx]
         nifti_path = selected_row[self.paths_key]
@@ -144,38 +128,6 @@ class NakoDataset(BaseDataset):
         img = torch.cat([img, spine_mask, vert_mask], dim=0)
         target = torch.tensor(row[self.target_cols].values.astype(np.float32))
         return img, target, torch.nan
-
-    # TODO
-    # def import_img(self, idx: int) -> Tuple[Tensor, pd.DataFrame]:
-    #     """Returns a ``Tensor`` img with dimensions `CxDxHxW` and the corresponding ``DataFrame``
-    #     row containing the data"""
-    #     row = self.df.iloc[idx]
-    #     t2w_path = row[self.paths_key]
-    #
-    #     img = nib.load(t2w_path, mmap=False).get_fdata(dtype=np.float32)
-    #     img = self._interpolate(img)
-    #     img = self._normalize(img)
-    #     if self.augment:
-    #         img = self._augment(img)
-    #
-    #     spine_mask = self.import_mask(t2w_path, '-sag_mod-T2w_seg-spine_msk.nii.gz')
-    #     vert_mask = self.import_mask(t2w_path, '-sag_mod-T2w_seg-vert_msk.nii.gz')
-    #     img = torch.cat([img, spine_mask, vert_mask], dim=0)
-    #
-    #     return img, row
-
-    # def __getitem__(self, idx: int) -> Tuple[Tensor, Tensor, float]:
-    #     row = self.df.iloc[idx]
-    #     t2w_path = row[self.paths_key]
-    #     mask_path = t2w_path.replace('nako_data', 'nako_msk')
-    #
-    #     img = self.import_nii(t2w_path)
-    #     spine_mask = self.import_mask(mask_path, '-sag_mod-T2w_seg-spine_msk.nii.gz')
-    #     vert_mask = self.import_mask(mask_path, '-sag_mod-T2w_seg-vert_msk.nii.gz')
-    #     img = torch.cat([img, spine_mask, vert_mask], dim=0)
-    #     target = torch.tensor(row[self.target_cols].values.astype(np.float32))
-    #
-    #     return img, target, torch.nan
 
 
 class NakoBase(BaseDataset):
