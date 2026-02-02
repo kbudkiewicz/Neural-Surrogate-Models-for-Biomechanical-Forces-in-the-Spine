@@ -133,31 +133,15 @@ class NakoDataset(BaseDataset):
     def __init__(self, df, target_cols: str = 'coord', augment: bool = False):
         super().__init__(df, target_cols, augment)
 
-    @staticmethod
-    def _import_mask(row: str, pattern: str) -> Tensor:
-        mask_path = row.replace('nako_data', 'nako_msk')
-        mask_path = mask_path.replace('_T2w.nii.gz', pattern)
-        segmentation_mask = nib.load(mask_path, mmap=False).get_fdata().astype(np.float32)
-        segmentation_mask = torch.tensor(segmentation_mask).unsqueeze(0)
-        segmentation_mask = F.interpolate(
-            segmentation_mask.unsqueeze(0), size=(128, 128, 128), mode='trilinear', align_corners=False
-        ).squeeze(0)
-        return segmentation_mask
-
-    def import_img(self, idx: int) -> Tuple[Tensor, pd.DataFrame]:
-        row = self.df.iloc[idx]
-        data_path = row[self.paths_key]
-        img = nib.load(data_path, mmap=False).get_fdata().astype(np.float32)
-        img = self._normalize(img)
-        if self.augment:
-            img = self._augment(img)
-        spine_mask = self._import_mask(data_path, '_mod-T2w_seg-spine_msk.nii.gz')
-        vert_mask = self._import_mask(data_path, '_mod-T2w_seg-vert_msk.nii.gz')
-        img = torch.cat([img, spine_mask, vert_mask], dim=0)  # [3, D, H, W]
-        return img, row
-
     def __getitem__(self, idx: int) -> Tuple[Tensor, Tensor, float]:
-        img, row = self.import_img(idx)
+        row = self.df.iloc[idx]
+        t2w_path = row[self.paths_key]
+        mask_path = t2w_path.replace('nako_data', 'nako_msk')
+
+        img = self.import_nii(t2w_path)
+        spine_mask = self.import_mask(mask_path, '-sag_mod-T2w_seg-spine_msk.nii.gz')
+        vert_mask = self.import_mask(mask_path, '-sag_mod-T2w_seg-vert_msk.nii.gz')
+        img = torch.cat([img, spine_mask, vert_mask], dim=0)
         target = torch.tensor(row[self.target_cols].values.astype(np.float32))
         return img, target, torch.nan
 
