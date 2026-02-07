@@ -19,6 +19,15 @@ class MultilayerPerceptron(Module):
         return self.net(x)
 
 
+class BasicStem(nn.Sequential):
+    def __init__(self, in_features):
+        super().__init__(
+            nn.Conv3d(in_features, 64, kernel_size=(3, 7, 7), stride=(1, 2, 2), padding=(1, 3, 3), bias=False),
+            nn.BatchNorm3d(64),
+            nn.ReLU(inplace=True),
+        )
+
+
 # NOTE: video_models.r2plus1d_18 doesn't work very well
 class ResNet3DRegressor(nn.Module):
     """Basic Res3DNet regression network.
@@ -29,14 +38,8 @@ class ResNet3DRegressor(nn.Module):
     """
     def __init__(self, out_features: int, in_features: int = 3):
         super().__init__()
-        basic_stem = nn.Sequential(
-            nn.Conv3d(in_features, 64, kernel_size=(3, 7, 7), stride=(1, 2, 2),
-                      padding=(1, 3, 3), bias=False),
-            nn.BatchNorm3d(64),
-            nn.ReLU(inplace=True),
-        )
         self.backbone = video_models.r3d_18(weights=None)
-        self.backbone.stem = basic_stem
+        self.backbone.stem = BasicStem(in_features=in_features)
         self.backbone.fc = nn.Linear(self.backbone.fc.in_features, out_features)
 
     def forward(self, x: Tensor) -> Tensor:
