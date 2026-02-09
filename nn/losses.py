@@ -1,8 +1,9 @@
 from . import *
 import torch.nn.functional as F
+from torch.nn.modules.loss import _Loss
 
 
-class ScaledRMSELoss(nn.MSELoss):
+class RMSELoss(nn.MSELoss):
     def __init__(self, reduction):
         super().__init__(reduction=reduction)
 
@@ -13,7 +14,7 @@ class ScaledRMSELoss(nn.MSELoss):
 class ScaledLoss:
     """Scale a given loss by standard deviation across each batch element."""
     def __init__(self, criterion):
-        if not issubclass(criterion, nn.modules.loss._Loss):
+        if not issubclass(criterion, _Loss):
             raise TypeError(f'criterion must be a subclass of _Loss')
         self.criterion = criterion(reduction='none')
 
