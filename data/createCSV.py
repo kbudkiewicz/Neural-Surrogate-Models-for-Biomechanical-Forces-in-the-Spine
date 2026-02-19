@@ -1,19 +1,29 @@
 import os
 import argparse
+import torch
+import numpy as np
 import pandas as pd
 import nibabel as nib
 
 from utils import npz_to_dict, get_pat_ses, get_img_paths, generate_npz, get_scalars, unpack_scalar_from_dict, read_sto
 
 SCALARS: tuple = 'compr', 'shear', 'muscles', 'Ang'
+STO_FILES: dict = {
+    'ID': 'inverse_dynamics.sto',
+    'JRA': 'Neutral_Test_ReactionLoads.sto',
+    'SO': '_StaticOptimization_force.sto'
+}
 
 
 def check_nii_file(path: str) -> None:
-    img = nib.load(path, mmap=False)
-    _ = img.get_fdata().shape
+    """Check if the Nifti file can be read and saved as a ``Tensor``."""
+    print(f'Checking {path}...')
+    img = nib.load(path, mmap=False).get_fdata(dtype=np.float32)
+    # img = NII.load(path, False)
+    _ = torch.tensor(img, dtype=torch.float)
 
 
-def create_csv_from_sto(root: str, csv_name: str, desired: str = 'inverse_dynamics.sto'):
+def create_csv_from_sto(root: str, csv_name: str, desired: str = 'ID'):
     """Save data from sto_files along a given root directory to a csv file.
 
     .. note:: data and segmentation paths below are symbolic links to the datasets.
@@ -21,13 +31,17 @@ def create_csv_from_sto(root: str, csv_name: str, desired: str = 'inverse_dynami
     # data_path = segmentation_path = './'  # DEBUG
     data_path = segmentation_path = './derivatives-sim/rawdata_stitched'
     df = pd.DataFrame([])
+    if desired not in STO_FILES.keys():
+        raise KeyError(f'{desired} is not a known sto. Must be one of {list(STO_FILES.keys())}')
+    sto_filename = STO_FILES[desired]
 
     # find all files containing desired along root
     for dirpath, dirname, filenames in os.walk(root):
-        if desired in filenames:
+        if sto_filename in filenames:
             try:
-                sto = read_sto(os.path.join(dirpath, desired))  # read values from sto
-                suffix = dirpath.replace(root, '').replace('\\', '/').replace('/mbs/results/ID', '')
+                sto = read_sto(os.path.join(dirpath, sto_filename))  # read values from sto
+                suffix = dirpath.replace(root, '').replace('\\', '/')
+                suffix = suffix.replace(f'/mbs/results/{desired}', '')
                 nako_data = data_path + suffix
 
                 if os.path.exists(nako_data):
@@ -39,9 +53,9 @@ def create_csv_from_sto(root: str, csv_name: str, desired: str = 'inverse_dynami
 
                     for nii_path in nii_paths:
                         check_nii_file(nii_path)
-                    
+
                     # add values to existing DataFrame
-                    sto['nako_path'] = os.path.abspath(nako_file)
+                    sto['nako_path'] = os.path.abspath(nako_file).strip()
                     df = pd.concat([df, sto])
                 else:
                     print(f'No data found along {nako_data}')
