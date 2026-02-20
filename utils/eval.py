@@ -266,6 +266,51 @@ def plot_compare_models(
         plt.show()
 
 
+def plot_rmse(
+    *eval_files: Tuple[str, str],
+    width: float = 0.25,
+    remove: bool = False,
+    stack: Optional[Iterable[str]] = None,
+    plot_name: Optional[str] = None,
+):
+    def rmse(df: pd.DataFrame):
+        "Calcualte Root Mean Squared Error from Absolute Errors."
+        return np.sqrt(df.pow(2).mean())
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    factor = 0
+
+    for file, label in eval_files:
+        offset = width * factor
+        df = pd.read_csv(file).drop(columns='id')
+        df = df.filter(regex='absolute_error-')
+        if remove:
+            df = remove_outliers(df)
+        if isinstance(stack, Iterable):
+            df = stack_df_columns(df, stack)
+        x = np.arange(len(df.columns)) * len(eval_files) // 3
+        rmse_vals = rmse(df)
+        bar = ax.bar(x + offset, rmse_vals.round(2), width=width, label=label, log=True)
+                   # yerr=df.std(), ecolor='k', capsize=3)  # error bar kwargs
+        ax.bar_label(bar, fmt='')
+        factor += 1
+
+    if stack == list(_COORD_TO_ACTUAL.keys()):
+        ax.set_xticks(x + width * len(eval_files) / 2, _COORD_TO_ACTUAL.values(), rotation=45)
+    else:
+        ax.set_xticks(x + width * len(eval_files) / 2, df.columns, rotation=90)
+    plt.ylabel('Log RMSE')
+    plt.legend(bbox_to_anchor=(1.02, 0.8))
+    plt.grid(axis='y', linewidth=0.5, linestyle='--')
+    plt.tight_layout()
+
+    if plot_name:
+        plot_name = rename_if_exists(plot_name)
+        plt.savefig(plot_name)
+    else:
+        plt.show()
+
+
 # DEBUG
 # if __name__ == '__main__':
 #     plot_metric('abs_err', '../data/eval/eval.csv', 'test')
