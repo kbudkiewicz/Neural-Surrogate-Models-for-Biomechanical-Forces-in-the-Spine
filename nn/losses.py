@@ -13,13 +13,14 @@ class RMSELoss(nn.MSELoss):
 
 class ScaledLoss:
     """Scale a given loss by standard deviation across each batch element."""
-    def __init__(self, criterion):
+    def __init__(self, criterion, std: Tensor):
         if not issubclass(criterion, _Loss):
             raise TypeError(f'criterion must be a subclass of _Loss')
         self.criterion = criterion(reduction='none')
+        self.std = std
 
     def __call__(self, pred: Tensor, target: Tensor) -> Tensor:
         loss = self.criterion.forward(pred, target)
-        loss = loss / (loss.std(dim=0) + 1e-6)      # per batch
+        loss = loss / (self.std + 1e-6)      # per batch
         # loss = loss.T / (loss.std(dim=1) + 1e-6)    # per target
         return loss.mean()
