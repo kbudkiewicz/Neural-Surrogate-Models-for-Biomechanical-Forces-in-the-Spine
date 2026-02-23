@@ -169,19 +169,67 @@ def print_mean_std(csv_filename: str, keywords: str, stack: bool = False):
     valid_cols = df.columns[columns_with_keyword].values
     df = df[valid_cols]
 
+    def print_values(x: pd.DataFrame, col_name: str) -> None:
+        print(f'{col_name}: {x.median():16.2f} with {x.mean():.2f}+-{x.std():.2f}')
+
     if stack:
         df = df.stack()
-        print(f'{keywords}: {df.median():16.2f} with {df.mean():.2f}+-{df.std():.2f}')
+        print_values(df, keywords)
     else:
         for column_name in valid_cols:
             df_slice = df[column_name]
-            print(f'{column_name}: {df_slice.median():16.2f} with {df_slice.mean():.2f}+-{df_slice.std():.2f}')
+            print_values(df_slice, column_name)
 
 
 # --- Plotting ---
 def stack_df_columns(df: pd.DataFrame, stack: Iterable[str]) -> pd.DataFrame:
     """Stack all columns containing the same string or regex in stack to a single column."""
-    return pd.DataFrame({regex: df.filter(regex=regex).values.ravel() for regex in stack})
+    stacked_series = []
+    for string in stack:
+        cols = df.columns[df.columns.str.contains(string)]
+        melt = df[cols].melt(value_name=string)
+        values = melt[string].reset_index(drop=True)
+        stacked_series.append(values)
+
+    return pd.concat(stacked_series, axis=1)
+
+
+def stack_df_for_boxplot(df: pd.DataFrame, stack: Iterable[str]) -> pd.DataFrame:
+    """
+    Melts columns that contain any of the substrings in 'stack' into a long format.
+    Adds a 'stack_group' column indicating which substring matched.
+    """
+    dfs = []
+    for s in stack:
+        # Filter columns containing the current stack string (e.g., 'coord_0')
+        cols = [c for c in df.columns if s in c]
+        if not cols:
+            continue
+
+        # Melt these columns into a single 'value' column
+        subset = df[cols].melt(value_name='value')
+        subset['stack_group'] = s
+        dfs.append(subset)
+
+    if dfs:
+        return pd.concat(dfs, ignore_index=True)
+    return pd.DataFrame()
+
+
+def remove_outliers(df: pd.DataFrame, threshold: float = 1e2) -> pd.DataFrame:
+    mask = df.values <= threshold
+    return df[mask.all(axis=1)]
+
+
+def set_boxplot_bounds(metric: Callable, bottom: Optional[float] = None, top: Optional[float] = None):
+    if metric.__name__ == 'relative_error':
+        # lower, upper = max(0, df.min().min()), min(2, df.max().max())
+        plt.ylim([0, 5])
+    elif metric.__name__ == 'absolute_error':
+        plt.yscale('log')
+        plt.ylabel(f'Log {metric.__name__.replace('_', ' ')}')
+    else:
+        plt.ylim(bottom=bottom, top=top)
 
 
 def plot_metric(
@@ -193,7 +241,7 @@ def plot_metric(
 ):
     df = pd.read_csv(eval_file)
     header = df.columns
-    cols = header[header.str.contains(metric.__name__)]
+    cols = header[header.str.contains(metric.__name__ + '-')]
     if cols.empty:
         raise KeyError(f'{eval_file} does not contain metric {metric.__name__}.')
     df = df[cols]
@@ -209,15 +257,8 @@ def plot_metric(
 
     plt.figure(figsize=(max(df.shape[-1] // 6, 4), 6))
     plt.boxplot(df.values, tick_labels=tick_labels, meanline=True, showmeans=True)
-    plt.ylabel(metric.__name__)
-    if metric.__name__ == 'relative_error':
-        # lower, upper = max(0, df.min().min()), min(2, df.max().max())
-        plt.ylim([0, 2])
-    elif metric.__name__ == 'absolute_error':
-        plt.yscale('log')
-        plt.ylabel(f'Log {metric.__name__}')
-    else:
-        pass
+    plt.ylabel(metric.__name__.replace('_', ' ').capitalize())
+    set_boxplot_bounds(metric=metric)
     plt.xticks(rotation=90)
     if title is not None:
         plt.title('Dataset: ' + title)
@@ -231,7 +272,7 @@ def plot_metric(
         plt.show()
 
 
-def plot_compare_models(
+def plot_compare_models_bar(
     *eval_files: Tuple[str, str],
     metric: Callable,
     width: float = 0.3,
