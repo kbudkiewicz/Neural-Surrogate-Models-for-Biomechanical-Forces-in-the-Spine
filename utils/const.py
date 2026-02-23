@@ -1,24 +1,29 @@
-from typing import Iterable
+from typing import Iterable, Callable
+from functools import wraps
 
 
-def remove_trailing_chars(x: Iterable[str]) -> list:
-    return list(map(lambda s: s.replace('__Y_', ' '), x))
+def remove_trailing_chars(func: Callable) -> Callable:
+    """Decorator that replaces '__Y_' with a space in the input iterable."""
+    @wraps(func)
+    def wrapper(x: Iterable[str], *args, **kwargs) -> list:
+        cleaned_x = list(map(lambda s: s.replace('__Y_', ' '), x))
+        return func(cleaned_x, *args, **kwargs)
+    return wrapper
 
 
+@remove_trailing_chars
 def compr_map(x: Iterable[str]) -> list:
     f = lambda s: s.replace('compr', r'$F_{C}$')
-    x = remove_trailing_chars(x)
     return list(map(f, x))
 
 
+@remove_trailing_chars
 def shear_map(x: Iterable[str]) -> list:
     f = lambda s: s.replace('shear_AP', r'$F_{S,AP}$').replace('shear_ML', r'$F_{S,ML}$')
-    x = remove_trailing_chars(x)
     return list(map(f, x))
 
 
 def shearcompr_map(x: Iterable[str]) -> list:
-    x = remove_trailing_chars(x)
     return compr_map(shear_map(x))
 
 
