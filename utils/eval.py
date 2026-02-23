@@ -4,7 +4,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from utils.const import _COORDS, _COORD_TO_ACTUAL, _COMPRESSION, _SHEAR, _MUSCLES, _PRELIMINARIES
+from utils.const import (_COORDS, _COORDS_D, _COMPRESSION, _COMPRESSION_D, _SHEAR, _SHEAR_D,
+                         _SHEARCOMPR, _SHEARCOMPR_D, _MUSCLES, _PRELIMINARIES)
 from typing import Tuple, Optional, Union, Iterable, Callable
 from utils.preprocessing import wrap_dataloader
 from data.utils import rename_if_exists
@@ -318,7 +319,7 @@ def plot_rmse(
     def rmse(df: pd.DataFrame):
         return np.sqrt(df.pow(2).mean())
 
-    if stack == _COORDS:
+    if stack == _COORDS_D:
         fig, axes = plt.subplots(1, 2, figsize=(8, 5))
         ax, ax2 = axes
     else:
@@ -336,7 +337,7 @@ def plot_rmse(
             df = stack_df_columns(df, stack)
         x = np.arange(len(df.columns)) * ((len(eval_files) + 1) * width) + offset
         rmse_vals = rmse(df)
-        if stack == _COORDS:
+        if stack == _COORDS_D:
             torques, forces = rmse_vals[:3], rmse_vals[3:]
             ax.bar(x[:3], torques.round(2), width=width, label=label, log=False)
             ax2.bar(x[3:], forces.round(2), width=width, label=label, log=False)
@@ -344,8 +345,8 @@ def plot_rmse(
             ax.bar(x, rmse_vals.round(2), width=width, label=label, log=False)
         factor += 1
 
-    if stack == _COORDS:
-        labels = list(_COORD_TO_ACTUAL.values())
+    if stack == _COORDS_D:
+        labels = list(_COORDS_D.values())
         ax.set_xticks(x[:3] - offset_ticks, labels[:3])     # rotation=90
         ax2.set_xticks(x[3:] - offset_ticks, labels[3:])
         ax.set_ylabel('RMSE [Nm]')
@@ -354,7 +355,8 @@ def plot_rmse(
         ax2.grid(axis='y', linewidth=0.5, linestyle='--')
         ax.set_ylim(bottom=0, top=5)
     else:
-        ax.set_xticks(x - offset_ticks, df.columns.str.replace('absolute_error-', ''), rotation=90)
+        labels = list(stack.values()) if isinstance(stack, dict) else df.columns.str.replace('absolute_error-', '')
+        ax.set_xticks(x - offset_ticks, labels)
         ax.grid(axis='y', linewidth=0.5, linestyle='--')
         plt.ylabel('RMSE')
     plt.legend(bbox_to_anchor=(1.05, 0.8))
