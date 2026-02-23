@@ -277,8 +277,11 @@ def plot_rmse(
     def rmse(df: pd.DataFrame):
         return np.sqrt(df.pow(2).mean())
 
-    fig, ax = plt.subplots(figsize=(8, 5))
-    ax2 = ax.twinx()
+    if stack == _COORDS:
+        fig, axes = plt.subplots(1, 2, figsize=(8, 5))
+        ax, ax2 = axes
+    else:
+        fig, ax = plt.subplots(figsize=(8, 5))
     factor = 0
     offset_ticks = (len(eval_files) * width - width) / 2
 
@@ -292,21 +295,28 @@ def plot_rmse(
             df = stack_df_columns(df, stack)
         x = np.arange(len(df.columns)) * ((len(eval_files) + 1) * width) + offset
         rmse_vals = rmse(df)
-        torques, forces = rmse_vals[:3], rmse_vals[3:]
-        ax.bar(x[:3], torques.round(2), width=width, label=label, log=False)
-                   # yerr=df.std(), ecolor='k', capsize=3)  # error bar kwargs
-        ax2.bar(x[3:], forces.round(2), width=width, label=label, log=False)
+        if stack == _COORDS:
+            torques, forces = rmse_vals[:3], rmse_vals[3:]
+            ax.bar(x[:3], torques.round(2), width=width, label=label, log=False)
+            ax2.bar(x[3:], forces.round(2), width=width, label=label, log=False)
+        else:
+            ax.bar(x, rmse_vals.round(2), width=width, label=label, log=False)
         factor += 1
 
-    if stack == list(_COORD_TO_ACTUAL.keys()):
-        ax.set_xticks(x - offset_ticks, _COORD_TO_ACTUAL.values(), rotation=90)
-        plt.axvline(x=max(x) / 2, color='k', linestyle='-', lw=1)
+    if stack == _COORDS:
+        labels = list(_COORD_TO_ACTUAL.values())
+        ax.set_xticks(x[:3] - offset_ticks, labels[:3])     # rotation=90
+        ax2.set_xticks(x[3:] - offset_ticks, labels[3:])
+        ax.set_ylabel('RMSE [Nm]')
+        ax2.set_ylabel('RMSE [N]')
+        ax.grid(axis='y', linewidth=0.5, linestyle='--')
+        ax2.grid(axis='y', linewidth=0.5, linestyle='--')
+        ax.set_ylim(bottom=0, top=5)
     else:
         ax.set_xticks(x - offset_ticks, df.columns.str.replace('absolute_error-', ''), rotation=90)
-    ax.set_ylabel('RMSE [Nm]')
-    ax2.set_ylabel('RMSE [N]')
-    plt.legend(bbox_to_anchor=(1.12, 0.8))
-    plt.grid(axis='y', linewidth=0.5, linestyle='--')
+        ax.grid(axis='y', linewidth=0.5, linestyle='--')
+        plt.ylabel('RMSE')
+    plt.legend(bbox_to_anchor=(1.05, 0.8))
     plt.tight_layout()
 
     if plot_name:
