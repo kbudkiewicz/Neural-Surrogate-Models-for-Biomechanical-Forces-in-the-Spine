@@ -28,10 +28,17 @@ def shearcompr_map(x: Iterable[str]) -> list:
 
 
 @remove_trailing_chars
-def muscles_map(x: Iterable[str]) -> list:
+def muscles_map(x: Iterable[str], use_abbrev: bool = True) -> list:
     rem_g = lambda s: s.replace('__G_', ' ').replace('G_', '').replace('__F_', ' ').replace('F_', '')
     rem__ = lambda s: s.replace('_', ' ')
     x = list(map(rem_g, x))
+
+    if use_abbrev:
+        for i, s in enumerate(x):
+            for key, value in _MUSCLES_ABBREV.items():
+                if key in s:
+                    x[i] = x[i].replace(key, value)
+
     return list(map(rem__, x))
 
 
@@ -78,8 +85,19 @@ _MUSCLES: list = ['F_Ribcage_musc_rect_abdom_l',
                   'G_medial__G_multifidus__G_lumbar__G_left__F_L',
                   'G_medial__G_multifidus__G_lumbar__G_left__F_S',
                   'G_medial__G_multifidus__G_lumbar__G_right__F']
-_MUSCLES_D = dict(zip(_MUSCLES, muscles_map(_MUSCLES)))
-_PRELIMINARIES: list = [*_COMPRESSION, *_SHEAR, *_MUSCLES]
+_MUSCLES_ABBREV: dict = {
+    'rect_abdom': 'RO',
+    'internal_oblique': 'IO',
+    'external_oblique': 'EO',
+    'quadratus_lumborum': 'QL',
+    'multifidus': 'MF',
+    'psoas_major': 'PM',
+    'longissimus_thoracis': 'LTL',
+    'iliocostalis_lumborum': 'IL',
+    'interspinales': 'IS'
+}
+_MUSCLES_D = dict(zip(_MUSCLES, muscles_map(_MUSCLES, use_abbrev=True)))
+_PRELIMINARIES_D = dict(**_COMPRESSION_D, **_SHEAR_D, **_MUSCLES_D)
 
 # NAKO
 _COORDS = [f'coord_{i}' for i in range(6)]
