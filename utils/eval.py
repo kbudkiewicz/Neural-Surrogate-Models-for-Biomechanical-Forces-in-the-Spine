@@ -188,8 +188,14 @@ def stack_df_columns(df: pd.DataFrame, stack: Iterable[str]) -> pd.DataFrame:
     stacked_series = []
     for string in stack:
         cols = df.columns[df.columns.str.contains(string)]
-        melt = df[cols].melt(value_name=string)
-        values = melt[string].reset_index(drop=True)
+        df_copy = df[cols]
+        if len(cols) > 1:
+            melt = df_copy.melt(value_name=string)
+            values = melt[string].reset_index(drop=True)
+        elif len(cols) == 1:
+            values = df_copy
+        else:
+            raise ValueError(f'Column {string} contains no values')
         stacked_series.append(values)
 
     return pd.concat(stacked_series, axis=1)
