@@ -318,7 +318,10 @@ def plot_compare_models_bar(
 def plot_rmse(
     *eval_files: Tuple[str, str],
     width: float = 0.25,
+    alpha: float = 0.75,
+    figsize: tuple = (8, 5),
     remove: bool = False,
+    log: bool = False,
     stack: Optional[Iterable[str]] = None,
     plot_name: Optional[str] = None,
 ):
@@ -326,10 +329,10 @@ def plot_rmse(
         return np.sqrt(df.pow(2).mean())
 
     if stack == _COORDS_D:
-        fig, axes = plt.subplots(1, 2, figsize=(8, 5))
+        fig, axes = plt.subplots(1, 2, figsize=figsize)
         ax, ax2 = axes
     else:
-        fig, ax = plt.subplots(figsize=(8, 5))
+        fig, ax = plt.subplots(figsize=figsize)
     factor = 0
     offset_ticks = (len(eval_files) * width - width) / 2
 
@@ -345,10 +348,10 @@ def plot_rmse(
         rmse_vals = rmse(df)
         if stack == _COORDS_D:
             torques, forces = rmse_vals[:3], rmse_vals[3:]
-            ax.bar(x[:3], torques.round(2), width=width, label=label, log=False)
-            ax2.bar(x[3:], forces.round(2), width=width, label=label, log=False)
+            ax.bar(x[:3], torques, label=label, log=log, width=width,  alpha=alpha)
+            ax2.bar(x[3:], forces, label=label, log=log, width=width, alpha=alpha)
         else:
-            ax.bar(x, rmse_vals.round(2), width=width, label=label, log=False)
+            ax.bar(x, rmse_vals, label=label, log=log, width=width, alpha=alpha)
         factor += 1
 
     if stack == _COORDS_D:
