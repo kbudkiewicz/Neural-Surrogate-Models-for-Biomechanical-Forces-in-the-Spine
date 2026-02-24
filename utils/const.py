@@ -34,10 +34,8 @@ def muscles_map(x: Iterable[str], use_abbrev: bool = True) -> list:
     x = list(map(rem_g, x))
 
     if use_abbrev:
-        for i, s in enumerate(x):
-            for key, value in _MUSCLES_ABBREV.items():
-                if key in s:
-                    x[i] = x[i].replace(key, value)
+        for key, value in _MUSCLES_ABBREV.items():
+            x = [s.replace(key, value) for s in x]
 
     return list(map(rem__, x))
 
