@@ -2,6 +2,7 @@ import os
 import h5py
 import numpy as np
 import pandas as pd
+import xml.etree.ElementTree as ET
 from typing import Tuple, Optional
 
 # see Tanja's presentation for more details:
@@ -109,6 +110,57 @@ def read_sto(path: str) -> pd.DataFrame:
                 start_recording = True
         df = df.drop(columns=['time']).mean().to_frame().T
     return df
+
+
+def read_osim(osim_file_path: str):
+    """
+    Parses an OpenSim (.osim) XML file and flattens all Body parameters
+    into a single-row Pandas DataFrame (1 header row, 1 data row).
+
+    Parameters:
+    osim_file_path (str): The path to the input .osim file.
+    csv_file_path (str): The path where the output CSV should be saved.
+
+    Returns:
+    pd.DataFrame: The generated Pandas DataFrame containing one row of data.
+    """
+    tree = ET.parse(osim_file_path)
+    root = tree.getroot()
+
+    # Dictionary to hold our single row of flattened data
+    flat_data = {}
+
+    for body in root.findall('.//Body'):
+        body_name = body.get('name')
+
+        # 1. Extract Mass
+        mass_elem = body.find('mass')
+        if mass_elem is not None and mass_elem.text:
+            flat_data[f"{body_name}_mass"] = float(mass_elem.text.strip())
+
+        # 2. Extract and split Mass Center (X, Y, Z)
+        mc_elem = body.find('mass_center')
+        if mc_elem is not None and mc_elem.text:
+            mc_vals = mc_elem.text.strip().split()
+            if len(mc_vals) == 3:
+                flat_data[f"{body_name}_mc_x"] = float(mc_vals[0])
+                flat_data[f"{body_name}_mc_y"] = float(mc_vals[1])
+                flat_data[f"{body_name}_mc_z"] = float(mc_vals[2])
+
+        # 3. Extract and split Inertia (Ixx, Iyy, Izz, Ixy, Ixz, Iyz)
+        in_elem = body.find('inertia')
+        if in_elem is not None and in_elem.text:
+            in_vals = in_elem.text.strip().split()
+            if len(in_vals) == 6:
+                flat_data[f"{body_name}_inertia_xx"] = float(in_vals[0])
+                flat_data[f"{body_name}_inertia_yy"] = float(in_vals[1])
+                flat_data[f"{body_name}_inertia_zz"] = float(in_vals[2])
+                flat_data[f"{body_name}_inertia_xy"] = float(in_vals[3])
+                flat_data[f"{body_name}_inertia_xz"] = float(in_vals[4])
+                flat_data[f"{body_name}_inertia_yz"] = float(in_vals[5])
+
+    # Wrapping flat_data in a list to create a 1-row DataFrame
+    return pd.DataFrame([flat_data])
 
 
 # --- CSV manipulation ---

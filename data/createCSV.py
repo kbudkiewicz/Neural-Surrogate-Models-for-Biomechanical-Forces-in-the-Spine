@@ -5,7 +5,8 @@ import numpy as np
 import pandas as pd
 import nibabel as nib
 
-from utils import npz_to_dict, get_pat_ses, get_img_paths, generate_npz, get_scalars, unpack_scalar_from_dict, read_sto
+from utils import (npz_to_dict, get_pat_ses, get_img_paths, generate_npz, get_scalars, unpack_scalar_from_dict,
+                   read_sto, read_osim)
 
 SCALARS: tuple = 'compr', 'shear', 'muscles', 'Ang'
 STO_FILES: dict = {
@@ -23,7 +24,14 @@ def check_nii_file(path: str) -> None:
     _ = torch.tensor(img, dtype=torch.float)
 
 
-def create_csv_from_sto(root: str, csv_name: str, desired: str = 'ID'):
+def get_osim_path(path: str, desired: str) -> str:
+    number = path.split('/T2w')[0].split('/')[-1]
+    osim_file = f'{number}_base.osim'
+    osim_path = path.replace(f'/resultsnoLigs/{desired}', f'/models/opensim/{osim_file}')
+    return osim_path
+
+
+def create_csv_from_sto(root: str, csv_name: str, desired: str = 'ID', use_osim: bool = False):
     """Save data from sto_files along a given root directory to a csv file.
 
     .. note:: data and segmentation paths below are symbolic links to the datasets.
@@ -31,6 +39,7 @@ def create_csv_from_sto(root: str, csv_name: str, desired: str = 'ID'):
     # data_path = segmentation_path = './'  # DEBUG
     data_path = segmentation_path = './derivatives-sim/rawdata_stitched'
     df = pd.DataFrame([])
+    df_osim = pd.DataFrame([])
     if desired not in STO_FILES.keys():
         raise KeyError(f'{desired} is not a known sto. Must be one of {list(STO_FILES.keys())}')
     sto_filename = STO_FILES[desired]
@@ -40,8 +49,13 @@ def create_csv_from_sto(root: str, csv_name: str, desired: str = 'ID'):
         if sto_filename in filenames:
             try:
                 sto = read_sto(os.path.join(dirpath, sto_filename))  # read values from sto
-                suffix = dirpath.replace(root, '').replace('\\', '/')
-                suffix = suffix.replace(f'/mbs/results/{desired}', '')
+                dirpath = dirpath.replace('\\', '/')
+                if use_osim:
+                    osim_path = get_osim_path(dirpath, desired)
+                    print(f'Importing {osim_path}')
+                    osim = read_osim(osim_path)
+                suffix = dirpath.replace(root, '')
+                suffix = suffix.replace(f'/mbs/results_noLigs/{desired}', '')
                 nako_data = data_path + suffix
 
                 if os.path.exists(nako_data):
@@ -55,10 +69,14 @@ def create_csv_from_sto(root: str, csv_name: str, desired: str = 'ID'):
                         check_nii_file(nii_path)
 
                     # add values to existing DataFrame
-                    sto['nako_path'] = os.path.abspath(nako_file).strip()
+                    sto.insert(0, 'nako_path', os.path.abspath(nako_file).strip())
                     df = pd.concat([df, sto])
-                else:
-                    print(f'No data found along {nako_data}')
+                    if use_osim:
+                        osim.insert(0, 'nako_path', os.path.abspath(nako_file).strip())
+                        osim.insert(1, 'osim_path', os.path.abspath(osim_path).strip())
+                        df_osim = pd.concat([df_osim, osim])
+                    else:
+                        print(f'No data found along {nako_data}')
             except OSError:
                 raise
             except EOFError:
@@ -67,10 +85,10 @@ def create_csv_from_sto(root: str, csv_name: str, desired: str = 'ID'):
 
     print(f'Saving {csv_name}...')
     df[df.isna()] = 0.  # set forces and moments to 0 for patients without L6
-    nako_paths = df.pop('nako_path')
-    df.insert(0, 'nako_path', nako_paths)
     df.insert(0, 'id', range(len(df.index)))  # reset index
     df.to_csv(csv_name, index=False)
+    if use_osim:
+        df_osim.to_csv('osim-' + csv_name, index=False)
 
 
 def create_csv_from_npz(csv_name: str, npz_filename: str, n: int, tasks: list[str] = None):
