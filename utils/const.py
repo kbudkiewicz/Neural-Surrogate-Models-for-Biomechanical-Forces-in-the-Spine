@@ -27,6 +27,14 @@ def shearcompr_map(x: Iterable[str]) -> list:
     return compr_map(shear_map(x))
 
 
+@remove_trailing_chars
+def muscles_map(x: Iterable[str]) -> list:
+    rem_g = lambda s: s.replace('__G_', ' ').replace('G_', '').replace('__F_', ' ').replace('F_', '')
+    rem__ = lambda s: s.replace('_', ' ')
+    x = list(map(rem_g, x))
+    return list(map(rem__, x))
+
+
 # Preliminaries
 _COMPRESSION: list = [f'compr__Y_L{i}' for i in range(1, 6)]
 _COMPRESSION.append('compr__Y_T12')
@@ -42,25 +50,35 @@ _SHEARCOMPR_D = dict(zip(_SHEARCOMPR, shearcompr_map(_SHEARCOMPR)))
 
 _MUSCLES: list = ['F_Ribcage_musc_rect_abdom_l',
                   'F_Ribcage_musc_rect_abdom_r',
-                  'G_lateral__G_external_oblique__G_left',
-                  'G_lateral__G_external_oblique__G_right',
-                  'G_lateral__G_iliocostalis_lumborum__G_left',
+                  'G_lateral__G_external_oblique__G_left__F_exte',
+                  'G_lateral__G_external_oblique__G_right__F_ext',
+                  'G_lateral__G_iliocostalis_lumborum__G_left__F',
                   'G_lateral__G_iliocostalis_lumborum__G_right',
-                  'G_lateral__G_internal_oblique__G_lefte',
-                  'G_lateral__G_internal_oblique__G_right',
-                  'G_lateral__G_longissimus_thoracis__G_left',
-                  'G_lateral__G_longissimus_thoracis__G_right',
-                  'G_lateral__G_psoas_major__G_left__F_Pelvis',
+                  'G_lateral__G_internal_oblique__G_left__F_inte',
+                  'G_lateral__G_internal_oblique__G_right__F_int',
+                  'G_lateral__G_longissimus_thoracis__G_left__F',
+                  'G_lateral__G_longissimus_thoracis__G_right__F',
+                  'G_lateral__G_psoas_major__G_left__F_Pelvis_L1',
+                  'G_lateral__G_psoas_major__G_left__F_Pelvis_L2',
+                  'G_lateral__G_psoas_major__G_left__F_Pelvis_L3',
+                  'G_lateral__G_psoas_major__G_left__F_Pelvis_L4',
+                  'G_lateral__G_psoas_major__G_left__F_Pelvis_L5',
                   'G_lateral__G_psoas_major__G_right__F_Pelvis_L',
-                  'G_lateral__G_quadratus_lumborum__G_left',
-                  'G_lateral__G_quadratus_lumborum__G_left',
-                  'G_lateral__G_quadratus_lumborum__G_right',
-                  'G_lateral__G_quadratus_lumborum__G_right',
-                  'G_medial__G_interspinales__F',
-                  'G_medial__G_interspinales__F_T12',
-                  'G_medial__G_multifidus__G_lumbar__G_left',
-                  'G_medial__G_multifidus__G_lumbar__G_left',
-                  'G_medial__G_multifidus__G_lumbar__G_right']
+                  'G_lateral__G_quadratus_lumborum__G_left__F_L2',
+                  'G_lateral__G_quadratus_lumborum__G_left__F_L3',
+                  'G_lateral__G_quadratus_lumborum__G_left__F_L4',
+                  'G_lateral__G_quadratus_lumborum__G_left__F_Pe',
+                  'G_lateral__G_quadratus_lumborum__G_right__F_L',
+                  'G_lateral__G_quadratus_lumborum__G_right__F_P',
+                  'G_medial__G_interspinales__F_L1_L2',
+                  'G_medial__G_interspinales__F_L2_L3',
+                  'G_medial__G_interspinales__F_L3_L4',
+                  'G_medial__G_interspinales__F_L4_L5',
+                  'G_medial__G_interspinales__F_T12_L1',
+                  'G_medial__G_multifidus__G_lumbar__G_left__F_L',
+                  'G_medial__G_multifidus__G_lumbar__G_left__F_S',
+                  'G_medial__G_multifidus__G_lumbar__G_right__F']
+_MUSCLES_D = dict(zip(_MUSCLES, muscles_map(_MUSCLES)))
 _PRELIMINARIES: list = [*_COMPRESSION, *_SHEAR, *_MUSCLES]
 
 # NAKO
