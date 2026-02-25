@@ -70,15 +70,20 @@ def main():
     num_epochs = 100
     num_workers = 16
     best_loss = float('inf')
-    csv_path = "data/csv/nako_zeroed_.csv"
-    npz_path = csv_path.replace("csv", "npz")
+    osim_path = 'data/csv/nako_osim_data.csv'
+    csv_path = 'data/csv/nako_zeroed_.csv'
+    npz_path = csv_path.replace('csv', 'npz')
     df = pd.read_csv(csv_path)
+    if isinstance(osim_path, str):
+        print(f'CONDITIONING ON: Using data from {osim_path}...')
+        osim = pd.read_csv(osim_path)
     train_idx, val_idx, test_idx = get_splits(npz_path, df)
     print(f"Split sizes: Train={len(train_idx)}, Val={len(val_idx)}, Test={len(test_idx)}")
 
     criterion = nn.MSELoss()
-    dataset = ShearComprDataset
-    train_dataset, val_dataset = dataset(df.iloc[train_idx]), dataset(df.iloc[val_idx])
+    dataset = NakoImagesDataset
+    train_dataset = dataset(df.iloc[train_idx], osim=osim.iloc[train_idx] if isinstance(osim, pd.DataFrame) else None)
+    val_dataset = dataset(df.iloc[val_idx], osim=osim.iloc[val_idx] if isinstance(osim, pd.DataFrame) else None)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers,)
     # pin_memory=True, sampler=DistributedSampler(train_dataset, shuffle=True))
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers,)

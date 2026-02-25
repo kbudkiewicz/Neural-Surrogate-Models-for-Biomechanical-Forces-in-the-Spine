@@ -27,11 +27,11 @@ def check_nii_file(path: str) -> None:
 def get_osim_path(path: str, desired: str) -> str:
     number = path.split('/T2w')[0].split('/')[-1]
     osim_file = f'{number}_base.osim'
-    osim_path = path.replace(f'/resultsnoLigs/{desired}', f'/models/opensim/{osim_file}')
+    osim_path = path.replace(f'/results_noLigs/{desired}', f'/models/opensim/{osim_file}')
     return osim_path
 
 
-def create_csv_from_sto(root: str, csv_name: str, desired: str = 'ID', use_osim: bool = False):
+def create_csv_from_sto(root: str, csv_filename: str, desired: str = 'ID', use_osim: bool = False):
     """Save data from sto_files along a given root directory to a csv file.
 
     .. note:: data and segmentation paths below are symbolic links to the datasets.
@@ -83,18 +83,20 @@ def create_csv_from_sto(root: str, csv_name: str, desired: str = 'ID', use_osim:
                 print(f"EOFError: Corrupted image along {nako_file}")
                 continue
 
-    print(f'Saving {csv_name}...')
+    print(f'Saving {csv_filename}...')
     df[df.isna()] = 0.  # set forces and moments to 0 for patients without L6
     df.insert(0, 'id', range(len(df.index)))  # reset index
-    df.to_csv(csv_name, index=False)
+    df.to_csv(csv_filename, index=False)
     if use_osim:
-        df_osim.to_csv('osim-' + csv_name, index=False)
+        df_osim[df_osim.isna()] = 0.
+        df_osim.insert(0, 'id', range(len(df_osim.index)))
+        df_osim.to_csv(csv_filename + 'osim', index=False)
 
 
-def create_csv_from_npz(csv_name: str, npz_filename: str, n: int, tasks: list[str] = None):
+def create_csv_from_npz(csv_filename: str, npz_filename: str, n: int, tasks: list[str] = None):
     """
     Args:
-        csv_name (str): name of the csv file to which the data is saved.
+        csv_filename (str): name of the csv file to which the data is saved.
         npz_filename (str): name of the npz file from which matlab structs are loaded.
         n (int): number of samples contained in the csv file.
         tasks (list[str]): list of tasks. Must contain string literals.
@@ -146,19 +148,19 @@ def create_csv_from_npz(csv_name: str, npz_filename: str, n: int, tasks: list[st
             print(f"ERROR: Corrupted image along {ctImgPath}.")
             continue
 
-    print(f'Saving {csv_name}...')
+    print(f'Saving {csv_filename}...')
     df = pd.DataFrame.from_dict(csv_dict, 'index')
     df.insert(0, 'id', range(len(df.index)))    # reset index
-    df.to_csv(csv_name, index=False)
+    df.to_csv(csv_filename, index=False)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--csv_filename', required=True, type=str, default='default.csv')
-    parser.add_argument('--npz_filename', required=False, type=str, default='default.npz')
+    parser.add_argument('--csv-filename', required=True, type=str, default='default.csv')
+    parser.add_argument('--npz-filename', required=False, type=str, default='default.npz')
     parser.add_argument('-s', '--samples', required=False, type=int, default=1000)
     parser.add_argument('-t', '--tasks', required=False, nargs='*', type=str)
     args = parser.parse_args()
 
-    create_csv_from_npz(args.csv_file, args.npz_file, args.samples, args.tasks)
-    # create_csv_from_sto('./derivatives-sim', 'test_nako.csv')
+    create_csv_from_npz(args.csv_filename, args.npz_filename, args.samples, args.tasks)
+    # create_csv_from_sto('./derivatives-sim-osim', 'nako_osim.csv', use_osim=True)

@@ -77,7 +77,7 @@ class BaseDataset(Dataset):
     def get_targets(self, regex: str) -> pd.Index:
         """Find columns fitting a regex pattern"""
         header = self.df.columns
-        return header[header.str.contains(regex)]
+        return header[header.str.contains(regex, regex=True)]
 
     def import_nii(self, path: str) -> Tensor:
         img = self._load_nifti(path)
@@ -131,8 +131,16 @@ class NakoDataset(BaseDataset):
 
 
 class NakoBase(BaseDataset):
-    def __init__(self, df, target_cols: str = 'coord', resolution: int = 128, augment: bool = False):
+    def __init__(self, df, target_cols: str = 'coord', resolution: int = 128, augment: bool = False,
+                 osim: Optional[Union[str, pd.DataFrame]] = None):
         super().__init__(df, target_cols, resolution, augment)
+        if osim is not None:
+            if isinstance(osim, str):
+                self.osim = pd.read_csv(osim)
+            else:
+                self.osim = osim.reset_index(drop=True)
+            self.cond_cols = self.osim.columns[3:]   # ignore 'id', 'nako_path', and 'osim_path'
+            self.target_cols = self.get_targets('L[1-6]_coord')
 
     @staticmethod
     def _get_vibe_mask_path(path: str) -> str:
@@ -145,6 +153,11 @@ class NakoBase(BaseDataset):
     def load_nifti(x: NII) -> Tensor:
         x = x.get_array()
         x = np.nan_to_num(x, nan=0.0, posinf=0.0, neginf=0.0)
+        x = torch.tensor(x, dtype=torch.float).unsqueeze(0)
+        return x
+
+    def load_osim(self, idx: int) -> Tensor:
+        x = self.osim.iloc[idx][self.cond_cols].values
         x = torch.tensor(x, dtype=torch.float).unsqueeze(0)
         return x
 
@@ -172,10 +185,10 @@ class NakoImagesDataset(NakoBase):
     Dataset containing T2w, in-phase and out-phase images. The T2w image is first upsampled to VIBES resolution and then
     preprocessed as usual.
     """
-    def __init__(self, df, target_cols: str = 'coord'):
-        super().__init__(df, target_cols)
+    def __init__(self, df, target_cols: str = 'coord', osim: Optional[str] = None):
+        super().__init__(df, target_cols, osim=osim)
 
-    def __getitem__(self, idx: int) -> Tuple[Tensor, Tensor, float]:
+    def __getitem__(self, idx: int) -> Tuple[Tensor, Tensor, Union[Tensor, float]]:
         t2w_img_path = self.df.iloc[idx][self.paths_key]
         vibe_img_path = t2w_img_path.replace('/T2w', '/vibe')
         inphase_img_path = vibe_img_path.replace('-sag_T2w.nii.gz', '-ax_part-inphase_vibe.nii.gz')
@@ -192,7 +205,12 @@ class NakoImagesDataset(NakoBase):
 
         img = torch.cat([t2w_image, inphase_image, outphase_image], dim=0)
         target = torch.tensor(self.df.iloc[idx][self.target_cols].values.astype(np.float32))
-        return img, target, torch.nan
+
+        if self.osim is not None:
+            conditioning = self.load_osim(idx)
+        else:
+            conditioning = torch.nan
+        return img, target, conditioning
 
 
 class NakoImagesSegDataset(NakoBase):
