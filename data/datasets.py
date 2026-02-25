@@ -158,7 +158,7 @@ class NakoBase(BaseDataset):
 
     def load_osim(self, idx: int) -> Tensor:
         x = self.osim.iloc[idx][self.cond_cols].to_numpy(dtype=np.float32)
-        x = torch.tensor(x, dtype=torch.float).unsqueeze(0)
+        x = torch.tensor(x, dtype=torch.float)
         return x
 
     def preprocess_image(self, x: NII) -> Tensor:
