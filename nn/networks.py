@@ -1,4 +1,5 @@
 import torchvision.models.video as video_models
+from torchvision.models.video.resnet import Conv3DSimple, BasicBlock, VideoResNet
 from . import *
 from typing import Optional
 from .modules import LinearBlock
@@ -28,7 +29,6 @@ class BasicStem(nn.Sequential):
         )
 
 
-# NOTE: video_models.r2plus1d_18 doesn't work very well
 class ResNet3DRegressor(nn.Module):
     """Basic Res3DNet regression network.
 
@@ -49,16 +49,38 @@ class ResNet3DRegressor(nn.Module):
 class Chimera(Module):
     """Model combining already trained Res3DNet and a MultilayerPerceptron. The former predicts the muscle forces from
     an MRI image, while the former predicts the shear and compression forces based on those."""
-    def __init__(self, *dims, conditioning_dim: int = 7):
+    def __init__(self, conditioning_dim: int, out_features: int, in_features: int = 3):
         super().__init__()
-        self.mlp = MultilayerPerceptron(*dims)
-        self.resnet = video_models.r3d_18(weights=None)     # out_dim = 512
-        self.resnet.fc = LinearBlock(self.resnet.fc.in_features, dims[0])
-        self.embd_conditioning = nn.Linear(conditioning_dim, dims[0])
-        self.out_dim = dims[-1]
+        self.backbone = VideoResNet(
+            BasicBlock,
+            [Conv3DSimple] * 4,
+            [2, 2, 2, 2],
+            BasicStem
+        )
+        self.backbone.stem = BasicStem(in_features=in_features)
+
+        self.embd_conditioning = nn.Sequential(
+            nn.Linear(conditioning_dim, 512),
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.1),
+            nn.Linear(512, self.backbone.fc.in_features),
+            nn.ReLU(inplace=True),
+            nn.Dropout(),
+        )
+        self.mlp = nn.Sequential(
+            LinearBlock(self.backbone.fc.in_features, 512),
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.1),
+            nn.Linear(512, 256),
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.3),
+            nn.Linear(256, out_features),
+        )
+        self.backbone.fc = nn.Identity()
 
     def forward(self, x: Tensor, conditioning: Optional[Tensor] = None) -> Tensor:
-        x = self.resnet(x)
         if conditioning is not None:
             conditioning = self.embd_conditioning(conditioning)
-        return self.mlp(x, conditioning)
+        x = self.backbone(x)
+        x = self.mlp(x + conditioning)
+        return x
