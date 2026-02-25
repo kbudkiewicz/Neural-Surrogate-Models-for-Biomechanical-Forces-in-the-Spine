@@ -75,8 +75,8 @@ def create_csv_from_sto(root: str, csv_filename: str, desired: str = 'ID', use_o
                         osim.insert(0, 'nako_path', os.path.abspath(nako_file).strip())
                         osim.insert(1, 'osim_path', os.path.abspath(osim_path).strip())
                         df_osim = pd.concat([df_osim, osim])
-                    else:
-                        print(f'No data found along {nako_data}')
+                else:
+                    print(f'No data found along {nako_data}')
             except OSError:
                 raise
             except EOFError:
