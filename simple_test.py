@@ -72,7 +72,7 @@ def main():
     best_loss = float('inf')
     osim_path = 'data/csv/nako_osim_data.csv'
     csv_path = 'data/csv/nako_zeroed_.csv'
-    npz_path = csv_path.replace('csv', 'npz')
+    npz_path = csv_path.replace('.csv', '.npz')
     df = pd.read_csv(csv_path)
     if isinstance(osim_path, str):
         print(f'CONDITIONING ON: Using data from {osim_path}...')
