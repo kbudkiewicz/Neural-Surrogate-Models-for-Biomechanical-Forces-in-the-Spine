@@ -21,7 +21,7 @@ class MultilayerPerceptron(Module):
 
 
 class BasicStem(nn.Sequential):
-    def __init__(self, in_features):
+    def __init__(self, in_features: int = 3):
         super().__init__(
             nn.Conv3d(in_features, 64, kernel_size=(3, 7, 7), stride=(1, 2, 2), padding=(1, 3, 3), bias=False),
             nn.BatchNorm3d(64),
@@ -68,7 +68,7 @@ class Chimera(Module):
             nn.Dropout(),
         )
         self.mlp = nn.Sequential(
-            LinearBlock(self.backbone.fc.in_features, 512),
+            nn.Linear(self.backbone.fc.in_features, 512),
             nn.ReLU(inplace=True),
             nn.Dropout(0.1),
             nn.Linear(512, 256),
