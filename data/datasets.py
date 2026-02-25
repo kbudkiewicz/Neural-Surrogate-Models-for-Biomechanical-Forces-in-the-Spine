@@ -101,10 +101,10 @@ class BaseDataset(Dataset):
         tissue_mask = self.import_mask(nifti_path, '_seg-tissue_msk.nii.gz')
         spine_mask = self.import_mask(nifti_path, '_seg-spine_msk.nii.gz')
         img = torch.cat([img, tissue_mask, spine_mask], dim=0)
-        target = torch.tensor(selected_row[self.target_cols].values.astype(np.float32))
+        target = torch.tensor(selected_row[self.target_cols].to_numpy(np.float32))
 
         try:
-            conditioning = torch.tensor(selected_row[self.cond_cols].values.astype(np.float32))
+            conditioning = torch.tensor(selected_row[self.cond_cols].to_numpy(np.float32))
         except KeyError:
             conditioning = torch.nan
         return img, target, conditioning
@@ -126,7 +126,7 @@ class NakoDataset(BaseDataset):
         spine_mask = self.import_mask(mask_path, '-sag_mod-T2w_seg-spine_msk.nii.gz')
         vert_mask = self.import_mask(mask_path, '-sag_mod-T2w_seg-vert_msk.nii.gz')
         img = torch.cat([img, spine_mask, vert_mask], dim=0)
-        target = torch.tensor(row[self.target_cols].values.astype(np.float32))
+        target = torch.tensor(row[self.target_cols].to_numpy(np.float32))
         return img, target, torch.nan
 
 
@@ -204,7 +204,7 @@ class NakoImagesDataset(NakoBase):
         t2w_image = self.preprocess_image(t2w_image)
 
         img = torch.cat([t2w_image, inphase_image, outphase_image], dim=0)
-        target = torch.tensor(self.df.iloc[idx][self.target_cols].values.astype(np.float32))
+        target = torch.tensor(self.df.iloc[idx][self.target_cols].to_numpy(np.float32))
 
         if self.osim is not None:
             conditioning = self.load_osim(idx)
@@ -242,7 +242,7 @@ class NakoImagesSegDataset(NakoBase):
         t2w_seg = self.preprocess_segmentation(t2w_seg)
 
         img = torch.cat([vibe_img_inphase, vibe_img_outphase, vibe_seg, t2w_img, t2w_seg], dim=0)
-        target = torch.tensor(self.df.iloc[idx][self.target_cols].values.astype(np.float32))
+        target = torch.tensor(self.df.iloc[idx][self.target_cols].to_numpy(np.float32))
         return img, target, torch.nan
 
 
@@ -283,6 +283,6 @@ class ForceToForceDataset(BaseDataset):
 
     def __getitem__(self, idx: int) -> Tuple[Tensor, Tensor, torch.nan]:
         row = self.df.iloc[idx]
-        input_ = torch.tensor(row[self.input_cols].values.astype(np.float32))
-        target = torch.tensor(row[self.target_cols].values.astype(np.float32))
+        input_ = torch.tensor(row[self.input_cols].to_numpy(np.float32))
+        target = torch.tensor(row[self.target_cols].to_numpy(np.float32))
         return input_, target, torch.nan
