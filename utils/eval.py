@@ -321,6 +321,16 @@ def barplot_metric(
     stack: Optional[Iterable[str]] = None,
     plot_name: Optional[str] = None,
 ):
+    def get_ylabels(metric, log: bool) -> Iterable[str]:
+        if metric == 'rmse':
+            l_ylabel, r_ylabel = 'RMSE [Nm]', 'RMSE [N]'
+        else:
+            l_ylabel = r_ylabel = metric.__name__.replace('_', ' ').capitalize() + ' [-]'
+        if log:
+            l_ylabel = 'Log ' + l_ylabel
+            r_ylabel = 'Log ' + r_ylabel
+        return l_ylabel, r_ylabel
+
     if stack == _COORDS_D:
         fig, axes = plt.subplots(1, 2, figsize=figsize)
         ax, ax2 = axes
@@ -350,16 +360,17 @@ def barplot_metric(
 
     if stack == _COORDS_D:
         xlabels = list(_COORDS_D.values())
+        l_ylabel, r_ylabel = get_ylabels(metric, log=log)
         ax.set_xticks(x[:3] - offset_ticks, xlabels[:3])     # rotation=90
         ax2.set_xticks(x[3:] - offset_ticks, xlabels[3:])
-        ax.set_ylabel('RMSE [Nm]')
-        ax2.set_ylabel('RMSE [N]')
+        ax.set_ylabel(l_ylabel)
+        ax2.set_ylabel(r_ylabel)
         ax.grid(axis='y', linewidth=0.5, linestyle='--')
         ax2.grid(axis='y', linewidth=0.5, linestyle='--')
         ax.set_ylim(bottom=0, top=5)
     else:
         xlabels = list(stack.values()) if isinstance(stack, dict) else df.columns.str.replace('absolute_error-', '')
-        ylabel = 'RMSE [N]' if metric == 'rmse' else metric.__name__.replace('_', ' ').capitalize() + ' [-]'
+        _, ylabel = get_ylabels(metric, log=log)
         ax.set_xticks(x - offset_ticks, xlabels, rotation=90)
         ax.grid(axis='y', linewidth=0.5, linestyle='--')
         plt.ylabel(ylabel)
