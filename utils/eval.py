@@ -339,7 +339,7 @@ def barplot_metric(
         if isinstance(stack, Iterable):
             df = stack_df_columns(df, stack)
         x = np.arange(len(df.columns)) * ((len(eval_files) + 1) * width) + offset
-        values = rmse(df) if metric == 'rmse' else df.values.mean(axis=0)
+        values = rmse(df) if metric == 'rmse' else df.mean(axis=0)
         if stack == _COORDS_D:
             torques, forces = values[:3], values[3:]
             ax.bar(x[:3], torques, label=label, log=log, width=width,  alpha=alpha)
