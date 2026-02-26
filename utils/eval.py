@@ -5,7 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from utils.const import (_COORDS, _COORDS_D, _COMPRESSION, _COMPRESSION_D, _SHEAR, _SHEAR_D,
-                         _SHEARCOMPR, _SHEARCOMPR_D, _MUSCLES, _PRELIMINARIES)
+                         _SHEARCOMPR, _SHEARCOMPR_D, _MUSCLES, _MUSCLES_D, _PRELIMINARIES_D)
 from typing import Tuple, Optional, Union, Iterable, Callable
 from utils.preprocessing import wrap_dataloader
 from data.utils import rename_if_exists
@@ -30,12 +30,8 @@ def absolute_error_by_std(pred: Tensor, target: Tensor, std) -> Tensor:
 #     return torch.abs(pred - torch.mean(target)) / len(target)
 
 
-# def mse(pred: Tensor, target: Tensor) -> Tensor:
-#     return torch.square(target - pred) / (torch.square(target) + 1e-8)
-#
-#
-# def mae(pred: Tensor, target: Tensor) -> Tensor:
-#     return torch.abs(target - pred) / (torch.abs(target) + 1e-8)
+def rmse(df: pd.DataFrame):
+    return np.sqrt(df.pow(2).mean())
 
 
 def import_weights(model: Module, weights: str, device: Union[str, torch.device]):
@@ -228,7 +224,7 @@ def remove_outliers(df: pd.DataFrame, threshold: float = 1e2) -> pd.DataFrame:
     return df[mask.all(axis=1)]
 
 
-def set_boxplot_bounds(metric: Callable, bottom: Optional[float] = None, top: Optional[float] = None):
+def set_boxplot_bounds(metric: Callable, bottom: float = 0., top: float = 3.):
     if metric.__name__ == 'relative_error':
         # lower, upper = max(0, df.min().min()), min(2, df.max().max())
         plt.ylim([0, 5])
@@ -314,9 +310,9 @@ def plot_compare_models_bar(
     else:
         plt.show()
 
-
-def plot_rmse(
+def barplot_metric(
     *eval_files: Tuple[str, str],
+    metric: Union[Callable, str],
     width: float = 0.25,
     alpha: float = 0.75,
     figsize: tuple = (8, 5),
@@ -325,9 +321,6 @@ def plot_rmse(
     stack: Optional[Iterable[str]] = None,
     plot_name: Optional[str] = None,
 ):
-    def rmse(df: pd.DataFrame):
-        return np.sqrt(df.pow(2).mean())
-
     if stack == _COORDS_D:
         fig, axes = plt.subplots(1, 2, figsize=figsize)
         ax, ax2 = axes
@@ -339,36 +332,38 @@ def plot_rmse(
     for file, label in eval_files:
         offset = width * factor
         df = pd.read_csv(file).drop(columns='id')
-        df = df.filter(regex='absolute_error-')
+        regex = 'absolute_error-' if metric == 'rmse' else metric.__name__ + '-'
+        df = df.filter(regex=regex)
         if remove:
             df = remove_outliers(df)
         if isinstance(stack, Iterable):
             df = stack_df_columns(df, stack)
         x = np.arange(len(df.columns)) * ((len(eval_files) + 1) * width) + offset
-        rmse_vals = rmse(df)
+        values = rmse(df) if metric == 'rmse' else df.values.mean(axis=0)
         if stack == _COORDS_D:
-            torques, forces = rmse_vals[:3], rmse_vals[3:]
+            torques, forces = values[:3], values[3:]
             ax.bar(x[:3], torques, label=label, log=log, width=width,  alpha=alpha)
             ax2.bar(x[3:], forces, label=label, log=log, width=width, alpha=alpha)
         else:
-            ax.bar(x, rmse_vals, label=label, log=log, width=width, alpha=alpha)
+            ax.bar(x, values, label=label, log=log, width=width, alpha=alpha)
         factor += 1
 
     if stack == _COORDS_D:
-        labels = list(_COORDS_D.values())
-        ax.set_xticks(x[:3] - offset_ticks, labels[:3])     # rotation=90
-        ax2.set_xticks(x[3:] - offset_ticks, labels[3:])
+        xlabels = list(_COORDS_D.values())
+        ax.set_xticks(x[:3] - offset_ticks, xlabels[:3])     # rotation=90
+        ax2.set_xticks(x[3:] - offset_ticks, xlabels[3:])
         ax.set_ylabel('RMSE [Nm]')
         ax2.set_ylabel('RMSE [N]')
         ax.grid(axis='y', linewidth=0.5, linestyle='--')
         ax2.grid(axis='y', linewidth=0.5, linestyle='--')
         ax.set_ylim(bottom=0, top=5)
     else:
-        labels = list(stack.values()) if isinstance(stack, dict) else df.columns.str.replace('absolute_error-', '')
-        ax.set_xticks(x - offset_ticks, labels)
+        xlabels = list(stack.values()) if isinstance(stack, dict) else df.columns.str.replace('absolute_error-', '')
+        ylabel = 'RMSE [N]' if metric == 'rmse' else metric.__name__.replace('_', ' ').capitalize() + ' [-]'
+        ax.set_xticks(x - offset_ticks, xlabels, rotation=90)
         ax.grid(axis='y', linewidth=0.5, linestyle='--')
-        plt.ylabel('RMSE')
-    plt.legend(bbox_to_anchor=(1.05, 0.8))
+        plt.ylabel(ylabel)
+        plt.legend(bbox_to_anchor=(1.1, 0.6))
     plt.tight_layout()
 
     if plot_name:
