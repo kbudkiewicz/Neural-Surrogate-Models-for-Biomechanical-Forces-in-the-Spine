@@ -85,10 +85,15 @@ def calculate_metrics(*metrics: Callable, model: Module, loader: DataLoader, dev
 
 
 def make_col_names(metric: np.array, target_col: pd.Index, label: str) -> pd.Index:
-    names = []
-    for i in range(metric.shape[-1]):
-        names.append(label + '-' + target_col[i])
+    names = [label + '-' + target_col[i] for i in range(metric.shape[-1])]
     return pd.Index(names)
+
+
+def make_regex(strings: Iterable[str]) -> str:
+    regex = ''
+    for string in strings:
+        regex += f'(?=.*{string})'
+    return regex
 
 
 def save_as_csv(
@@ -140,13 +145,6 @@ def evaluate(
     save_as_csv(metrics, data_paths=data_paths, target_cols=target_cols, csv_filename=csv_filename)
 
 
-def make_regex(strings: Iterable[str]) -> str:
-    regex = ''
-    for string in strings:
-        regex += f'(?=.*{string})'
-    return regex
-
-
 def print_mean_std(csv_filename: str, keywords: str, stack: bool = False):
     """
     Args:
@@ -176,6 +174,46 @@ def print_mean_std(csv_filename: str, keywords: str, stack: bool = False):
         for column_name in valid_cols:
             df_slice = df[column_name]
             print_values(df_slice, column_name)
+
+
+def eval_to_latex(
+    *metrics: Union[Callable, str],
+    path: str,
+    stack: Union[Iterable, str] = None,
+    **kwargs
+) -> str:
+    df = pd.read_csv(path)
+    summary = pd.DataFrame()
+
+    def create_subframe(x: pd.DataFrame, metric: Union[Callable, str]) -> pd.DataFrame:
+        index = pd.MultiIndex.from_product(
+            [[metric.__name__.replace('_', ' ').capitalize() if isinstance(metric, Callable) else metric],
+             ['Median', 'Mean', 'Std']], names=['Metric', 'Force']
+        )
+        if metric == 'rmse':
+            median = mean = std = rmse(x).values
+            x = pd.DataFrame([median, mean, std], index=index)
+        else:
+            median = x.median(axis=0).values
+            mean = x.mean(axis=0).values
+            std = x.std(axis=0).values
+            x = pd.DataFrame([median, mean, std], index=index)
+        return x
+
+    for metric in metrics:
+        regex = metric.__name__ if isinstance(metric, Callable) else 'absolute_error'
+        x = df.filter(regex=regex)
+        # x = stack_df_columns(x, stack=stack)
+        x = create_subframe(x, metric)
+        summary = pd.concat([summary, x])
+
+    if stack is not None:
+        summary.columns = stack
+    else:
+        summary.columns = df.columns[df.columns.str.contains('absolute_err')].str.replace('absolute_error-', '')
+    summary.columns = summary.columns.str.replace('_', ' ')
+    # summary.applymap_index(lambda v: "font-weight: bold;", axis="columns")
+    return summary.T.to_latex(float_format='{:.2f}'.format, multicolumn_format='c', position='h', **kwargs)
 
 
 # --- Plotting ---
