@@ -15,6 +15,14 @@ from torch.nn.utils import clip_grad_norm_
 from torch.utils.data import DataLoader
 
 
+def get_grad_norm(model: nn.Module) -> float:
+    total_norm = 0
+    for p in model.parameters():
+        if p.grad is not None:
+            total_norm += p.grad.data.norm(2).item() ** 2
+    return total_norm ** 0.5
+
+
 def train_one_epoch(model, loader, optimizer, device, criterion, epoch, epochs, target_cols):
     model.train()
     total_loss = 0
@@ -107,7 +115,7 @@ def main():
             val_loss = validate(model, val_loader, device, criterion, epoch, num_epochs, target_cols)
             grad_norm = get_grad_norm(model)
             print(f"Epoch {epoch+1}/{num_epochs} - Train Loss: {train_loss:.4f} Val Loss: {val_loss:.4f} "
-                  f"GradNorm: {grad_norm.item():.4f}")
+                  f"GradNorm: {grad_norm:.4f}")
             if val_loss < best_loss:
                 best_loss = val_loss
                 torch.save(model.state_dict(), model_name)
