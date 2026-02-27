@@ -184,6 +184,7 @@ def eval_to_latex(
 ) -> str:
     df = pd.read_csv(path)
     summary = pd.DataFrame()
+    original_columns = df.columns[df.columns.str.contains('absolute_error')].str.replace('absolute_error-', '')
 
     def create_subframe(x: pd.DataFrame, metric: Union[Callable, str]) -> pd.DataFrame:
         if metric == 'rmse':
@@ -203,24 +204,27 @@ def eval_to_latex(
         return x
 
     for metric in metrics:
-        regex = metric.__name__ if isinstance(metric, Callable) else 'absolute_error'
+        regex = metric.__name__ + '-' if isinstance(metric, Callable) else 'absolute_error-'
         x = df.filter(regex=regex)
-        # x = stack_df_columns(x, stack=stack)
+        if stack is not None:
+            x = stack_df_columns(x, stack=stack)
         x = create_subframe(x, metric)
         summary = pd.concat([summary, x])
 
     if stack is not None:
-        summary.columns = stack
+        if len(stack.values()) != len(summary.columns):
+            summary.columns = pd.Index([v for v, col in zip(stack.values(), original_columns) if col in stack.keys()])
+        else:
+            summary.columns = stack.values()
     else:
-        summary.columns = df.columns[df.columns.str.contains('absolute_err')].str.replace('absolute_error-', '')
-        summary.columns = summary.columns.str.replace('_', ' ')
+        summary.columns = original_columns.str.replace('_', ' ')
 
     # Add styling
     summary = summary.T
     styler = summary.style.map_index(lambda x: 'font-weight: bold;', axis='columns')    # columns in bold
     styler.format(precision=2)                                                          # float precision
     column_format = 'l' + 'c' * len(summary.columns)
-    return styler.to_latex(position='h', caption='TBD', column_format=column_format, position_float='centering',
+    return styler.to_latex(position='h', column_format=column_format, position_float='centering',
                            multicol_align='c', hrules=True, convert_css=True, **kwargs)
 
 
