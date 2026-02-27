@@ -87,12 +87,12 @@ _MUSCLES: list = ['F_Ribcage_musc_rect_abdom_l',
                   'G_medial__G_multifidus__G_lumbar__G_left__F_S',
                   'G_medial__G_multifidus__G_lumbar__G_right__F']
 _MUSCLES_ABBREV: dict = {
-    'rect_abdom': 'RO',
+    'rect_abdom': 'RA',
     'internal_oblique': 'IO',
     'external_oblique': 'EO',
+    'psoas_major': 'PM',
     'quadratus_lumborum': 'QL',
     'multifidus': 'MF',
-    'psoas_major': 'PM',
     'longissimus_thoracis': 'LTL',
     'iliocostalis_lumborum': 'IL',
     'interspinales': 'IS'
