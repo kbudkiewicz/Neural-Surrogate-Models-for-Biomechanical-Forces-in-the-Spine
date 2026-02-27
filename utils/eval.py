@@ -219,6 +219,9 @@ def eval_to_latex(
     else:
         summary.columns = original_columns.str.replace('_', ' ')
 
+    # filter high values
+    summary = summary.where(summary.values < 1e3, '-')
+
     # Add styling
     summary = summary.T
     styler = summary.style.map_index(lambda x: 'font-weight: bold;', axis='columns')    # columns in bold
