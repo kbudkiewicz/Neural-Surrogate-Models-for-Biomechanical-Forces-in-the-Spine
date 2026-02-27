@@ -48,6 +48,12 @@ def remove_zeros(x: np.array) -> np.array:
     return x[~np.all(x == 0, axis=1)]
 
 
+def append_zeroes(x: torch.Tensor, batch_size: int, dim: int, device) -> torch.Tensor:
+    delta = abs(batch_size - x.shape[0])
+    x = torch.cat([x, torch.zeros([delta, dim], device=device)], dim=0)
+    return x
+
+
 @torch.no_grad()
 def calculate_metrics(*metrics: Callable, model: Module, loader: DataLoader, device):
     expected_shape = loader_length, batch_size, dim = len(loader), loader.batch_size, loader.dataset.dim
@@ -57,6 +63,7 @@ def calculate_metrics(*metrics: Callable, model: Module, loader: DataLoader, dev
     model.eval()
 
     d = {metric.__name__: np.empty(expected_shape) for metric in metrics}
+    d['pred'] = np.empty(expected_shape)
 
     for i, batch in enumerate(loader):
         img, target, conditioning = batch
@@ -73,13 +80,15 @@ def calculate_metrics(*metrics: Callable, model: Module, loader: DataLoader, dev
             else:
                 value = metric(preds, target)
             if value.size() != torch.Size([*expected_shape[1:]]):
-                delta = abs(batch_size - value.shape[0])
-                value = torch.cat([value, torch.zeros([delta, dim], device=device)], dim=0)
+                value = append_zeroes(value, batch_size=batch_size, dim=dim, device=device)
             d[metric.__name__][i] = value.numpy(force=True)
 
-    for metric in metrics:
-        value = d[metric.__name__]
-        d[metric.__name__] = remove_zeros(value.reshape(loader_length * batch_size, dim))
+        if preds.size() != torch.Size([*expected_shape[1:]]):
+            preds = append_zeroes(preds, batch_size=batch_size, dim=dim, device=device)
+        d['pred'][i] = preds.numpy(force=True)
+
+    for k, v in d.items():
+        d[k] = remove_zeros(v.reshape(loader_length * batch_size, dim))
 
     return d
 
