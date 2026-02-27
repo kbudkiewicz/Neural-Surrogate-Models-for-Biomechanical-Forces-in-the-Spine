@@ -118,9 +118,10 @@ def coord_to_math(x: str) -> str:
 
 
 df = pd.read_csv('../data/csv/nako_zeroed_.csv')
-NAKO_COLUMNS = df.columns[df.columns.str.contains('coord')]
-_COORDS = [f'coord_{i}' for i in range(6)]
-_COORDS_ALL_D = dict(zip(NAKO_COLUMNS, map(coord_to_math, NAKO_COLUMNS)))
+NAKO_FORCES = sorted(df.columns[df.columns.str.contains('force')])
+NAKO_MOMENTS = sorted(df.columns[df.columns.str.contains('moment')])
+NAKO_FORCES.extend(NAKO_MOMENTS)
+_COORDS_ALL_D = dict(zip(NAKO_FORCES, map(coord_to_math, NAKO_FORCES)))
 _COORDS_D: dict = {'coord_0': r'$M_{x}$',
                    'coord_1': r'$M_{y}$',
                    'coord_2': r'$M_{z}$',
