@@ -188,13 +188,13 @@ def eval_to_latex(
     def create_subframe(x: pd.DataFrame, metric: Union[Callable, str]) -> pd.DataFrame:
         if metric == 'rmse':
             index = pd.MultiIndex.from_product(
-                [[metric.upper()], [' ']], names=[' ', 'Force']
+                [[metric.upper() + ' $\downarrow$'], [' ']], names=['Force', ' ']
             )
             x = pd.DataFrame([rmse(x).values], index=index)
         else:
             index = pd.MultiIndex.from_product(
-                [[metric.__name__.replace('_', ' ').capitalize()],
-                 ['Median', 'Mean', 'Std']], names=[' ', 'Force']
+                [[metric.__name__.replace('_', ' ').capitalize() + ' $\downarrow$'],
+                 ['Median', 'Mean', 'Std']], names=['Force', ' ']
             )
             median = x.median(axis=0).values
             mean = x.mean(axis=0).values
