@@ -44,30 +44,24 @@ def import_weights(model: Module, weights: str, device: Union[str, torch.device]
         print('No model was given or weight were not found. Proceeding with the provided model.')
 
 
-def remove_zeros(x: np.array) -> np.array:
-    return x[~np.all(x == 0, axis=1)]
-
-
-def append_zeroes(x: torch.Tensor, batch_size: int, dim: int, device) -> torch.Tensor:
-    delta = abs(batch_size - x.shape[0])
-    x = torch.cat([x, torch.zeros([delta, dim], device=device)], dim=0)
-    return x
-
-
 @torch.no_grad()
 def calculate_metrics(*metrics: Callable, model: Module, loader: DataLoader, device):
-    expected_shape = loader_length, batch_size, dim = len(loader), loader.batch_size, loader.dataset.dim
     std = loader.dataset.std
     std = std.to(device)
+    expected_shape = (len(loader.dataset), loader.dataset.dim)
     loader = wrap_dataloader(loader, 'Evaluation')
     model.eval()
 
     d = {metric.__name__: np.empty(expected_shape) for metric in metrics}
     d['pred'] = np.empty(expected_shape)
 
-    for i, batch in enumerate(loader):
+    i = 0
+    for batch in loader:
         img, target, conditioning = batch
         img, target = img.to(device), target.to(device)
+        batch_len = img.size(0)
+        window = slice(i, i + batch_len)
+
         if conditioning.isnan().any():
             preds = model(img)
         else:
@@ -79,16 +73,9 @@ def calculate_metrics(*metrics: Callable, model: Module, loader: DataLoader, dev
                 value = metric(preds, target, std)
             else:
                 value = metric(preds, target)
-            if value.size() != torch.Size([*expected_shape[1:]]):
-                value = append_zeroes(value, batch_size=batch_size, dim=dim, device=device)
-            d[metric.__name__][i] = value.numpy(force=True)
-
-        if preds.size() != torch.Size([*expected_shape[1:]]):
-            preds = append_zeroes(preds, batch_size=batch_size, dim=dim, device=device)
-        d['pred'][i] = preds.numpy(force=True)
-
-    for k, v in d.items():
-        d[k] = remove_zeros(v.reshape(loader_length * batch_size, dim))
+            d[metric.__name__][window] = value.numpy(force=True)
+        d['pred'][window] = preds.numpy(force=True)
+        i += batch_len
 
     return d
 
