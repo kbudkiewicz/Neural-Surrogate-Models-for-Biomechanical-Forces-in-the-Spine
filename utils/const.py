@@ -1,4 +1,6 @@
+import pandas as pd
 from typing import Iterable, Callable
+from itertools import cycle
 from functools import wraps
 
 
@@ -100,8 +102,25 @@ _MUSCLES_ABBREV: dict = {
 _MUSCLES_D = dict(zip(_MUSCLES, muscles_map(_MUSCLES, use_abbrev=True)))
 _PRELIMINARIES_D = dict(**_COMPRESSION_D, **_SHEAR_D, **_MUSCLES_D)
 
+
 # NAKO
+def coord_to_math(x: str) -> str:
+    vertebra, _, idx, type = x.split('_')
+    axes = {str(n): axis for n, axis in zip(range(6), cycle(['x', 'y', 'z']))}
+    if type == 'moment':
+        type = 'M'
+    elif type == 'force':
+        type = 'F'
+    else:
+        raise ValueError('Unexpected input. Expected force or moment')
+    axis = axes[idx]
+    return f'${type}_{axis}$ {vertebra}'
+
+
+df = pd.read_csv('../data/csv/nako_zeroed_.csv')
+NAKO_COLUMNS = df.columns[df.columns.str.contains('coord')]
 _COORDS = [f'coord_{i}' for i in range(6)]
+_COORDS_ALL_D = dict(zip(NAKO_COLUMNS, map(coord_to_math, NAKO_COLUMNS)))
 _COORDS_D: dict = {'coord_0': r'$M_{x}$',
                    'coord_1': r'$M_{y}$',
                    'coord_2': r'$M_{z}$',
