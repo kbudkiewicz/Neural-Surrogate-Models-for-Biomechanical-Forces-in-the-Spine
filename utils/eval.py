@@ -211,9 +211,15 @@ def eval_to_latex(
         summary.columns = stack
     else:
         summary.columns = df.columns[df.columns.str.contains('absolute_err')].str.replace('absolute_error-', '')
-    summary.columns = summary.columns.str.replace('_', ' ')
-    # summary.applymap_index(lambda v: "font-weight: bold;", axis="columns")
-    return summary.T.to_latex(float_format='{:.2f}'.format, multicolumn_format='c', position='h', **kwargs)
+        summary.columns = summary.columns.str.replace('_', ' ')
+
+    # Add styling
+    summary = summary.T
+    styler = summary.style.map_index(lambda x: 'font-weight: bold;', axis='columns')    # columns in bold
+    styler.format(precision=2)                                                          # float precision
+    column_format = 'l' + 'c' * len(summary.columns)
+    return styler.to_latex(position='h', caption='TBD', column_format=column_format, position_float='centering',
+                           multicol_align='c', hrules=True, convert_css=True, **kwargs)
 
 
 # --- Plotting ---
