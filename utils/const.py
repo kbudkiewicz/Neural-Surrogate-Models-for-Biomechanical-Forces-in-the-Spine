@@ -45,8 +45,11 @@ _COMPRESSION: list = [f'compr__Y_L{i}' for i in range(1, 6)]
 _COMPRESSION.append('compr__Y_T12')
 _COMPRESSION_D = dict(zip(_COMPRESSION, compr_map(_COMPRESSION)))
 
-_SHEAR: list = [f'shear_{name}__Y_L{i}' for i in range(1, 6) for name in ('AP', 'ML')]
-_SHEAR.extend([f'shear_{name}__Y_T12' for name in ('AP', 'ML')])
+_SHEAR_AP: list = [f'shear_AP__Y_L{i}' for i in range(1, 6)]
+_SHEAR_ML: list = [item.replace('AP', 'ML') for item in _SHEAR_AP]
+_SHEAR_AP.append(f'shear_AP__Y_T12')
+_SHEAR_ML.append('shear_ML__Y_T12')
+_SHEAR = [*_SHEAR_AP, *_SHEAR_ML]
 _SHEAR_D = dict(zip(_SHEAR, shear_map(_SHEAR)))
 
 _SHEARCOMPR: list = _COMPRESSION.copy()
