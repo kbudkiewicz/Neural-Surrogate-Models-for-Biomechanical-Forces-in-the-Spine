@@ -184,17 +184,17 @@ def eval_to_latex(
 ) -> str:
     df = pd.read_csv(path)
     summary = pd.DataFrame()
-    original_columns = df.columns[df.columns.str.contains('absolute_error')].str.replace('absolute_error-', '')
+    original_columns = df.columns[df.columns.str.contains('absolute_error-')].str.replace('absolute_error-', '')
 
     def create_subframe(x: pd.DataFrame, metric: Union[Callable, str]) -> pd.DataFrame:
         if metric == 'rmse':
             index = pd.MultiIndex.from_product(
-                [[metric.upper() + ' $\downarrow$'], [' ']], names=['Force', ' ']
+                [[metric.upper() + ' $\\downarrow$'], [' ']], names=['Force', ' ']
             )
             x = pd.DataFrame([rmse(x).values], index=index)
         else:
             index = pd.MultiIndex.from_product(
-                [[metric.__name__.replace('_', ' ').capitalize() + ' $\downarrow$'],
+                [[metric.__name__.replace('_', ' ').capitalize() + ' $\\downarrow$'],
                  ['Median', 'Mean', 'Std']], names=['Force', ' ']
             )
             median = x.median(axis=0).values
