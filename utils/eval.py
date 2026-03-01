@@ -383,6 +383,9 @@ def barplot_metric(
     if stack == _COORDS_D:
         fig, axes = plt.subplots(1, 2, figsize=figsize)
         ax, ax2 = axes
+    elif stack == _PRELIMINARIES_D:
+        fig, axes = plt.subplots(2, 1, figsize=figsize)
+        ax, ax2 = axes
     else:
         fig, ax = plt.subplots(figsize=figsize)
     factor = 0
@@ -399,24 +402,34 @@ def barplot_metric(
             df = stack_df_columns(df, stack)
         x = np.arange(len(df.columns)) * ((len(eval_files) + 1) * width) + offset
         values = rmse(df) if metric == 'rmse' else df.mean(axis=0)
-        if stack == _COORDS_D:
-            torques, forces = values[:3], values[3:]
-            ax.bar(x[:3], torques, label=label, log=log, width=width,  alpha=alpha)
-            ax2.bar(x[3:], forces, label=label, log=log, width=width, alpha=alpha)
+
+        if stack == _COORDS_D or _PRELIMINARIES_D:
+            if stack == _COORDS_D:
+                left, right = slice(3), slice(3, len(_COORDS_D))
+            elif stack == _PRELIMINARIES_D:
+                left, right = slice(18), slice(18, len(_PRELIMINARIES_D))
+            torques, forces = values[left], values[right]
+            ax.bar(x[left], torques, label=label, log=log, width=width,  alpha=alpha)
+            ax2.bar(x[right], forces, label=label, log=log, width=width, alpha=alpha)
         else:
             ax.bar(x, values, label=label, log=log, width=width, alpha=alpha)
         factor += 1
 
-    if stack == _COORDS_D:
-        xlabels = list(_COORDS_D.values())
+    if stack == _COORDS_D or stack == _PRELIMINARIES_D:
+        xlabels = list(stack.values())
         l_ylabel, r_ylabel = get_ylabels(metric, log=log)
-        ax.set_xticks(x[:3] - offset_ticks, xlabels[:3])     # rotation=90
-        ax2.set_xticks(x[3:] - offset_ticks, xlabels[3:])
+        ax.set_xticks(x[left] - offset_ticks, xlabels[left], rotation=90)
+        ax2.set_xticks(x[right] - offset_ticks, xlabels[right], rotation=90)
         ax.set_ylabel(l_ylabel)
         ax2.set_ylabel(r_ylabel)
         ax.grid(axis='y', linewidth=0.5, linestyle='--')
         ax2.grid(axis='y', linewidth=0.5, linestyle='--')
-        ax.set_ylim(bottom=0, top=5)
+        if stack == _COORDS_D:
+            legend_kwargs = {'loc': 'center right', 'bbox_to_anchor': (1.5, 0.5)}
+            ax2.legend(**legend_kwargs)
+        else:
+            legend_kwargs = {'loc': 'upper center', 'ncols': len(eval_files), 'bbox_to_anchor': (0.5, 1.3)}
+            ax.legend(**legend_kwargs)
     else:
         xlabels = list(stack.values()) if isinstance(stack, dict) else df.columns.str.replace('absolute_error-', '')
         _, ylabel = get_ylabels(metric, log=log)
