@@ -12,7 +12,7 @@ from torch.utils.data import Dataset
 
 
 class BaseDataset(Dataset):
-    def __init__(self, df, target_cols: str, resolution: int = 128, augment: bool = False):
+    def __init__(self, df, target_cols: str, resolution: int = 128, conditioning: bool = False, augment: bool = False):
         if isinstance(df, str):
             self.df = pd.read_csv(df)
         else:
@@ -21,6 +21,7 @@ class BaseDataset(Dataset):
         self.cond_cols = self.get_targets('Ang|weight')
         self.paths_key = self.get_targets('_path').values[0]
         self.resolution = resolution
+        self.conditioning = conditioning
         self.augment = augment
 
     @property
@@ -103,9 +104,9 @@ class BaseDataset(Dataset):
         img = torch.cat([img, tissue_mask, spine_mask], dim=0)
         target = torch.tensor(selected_row[self.target_cols].to_numpy(np.float32))
 
-        try:
+        if self.conditioning:
             conditioning = torch.tensor(selected_row[self.cond_cols].to_numpy(np.float32))
-        except KeyError:
+        else:
             conditioning = torch.nan
         return img, target, conditioning
 
