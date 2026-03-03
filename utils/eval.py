@@ -460,7 +460,7 @@ def plot_correlation(path: str, figsize: tuple = (10, 10), stack: Optional[Itera
     else:
         dataset = dataset[dataset.columns[:121]]
     corr = dataset.corr()
-    mask = np.triu(np.ones_like(corr, dtype=bool), k=1)    # TODO
+    mask = np.triu(np.ones_like(corr, dtype=bool), k=1)
 
     fig, ax = plt.subplots(figsize=figsize)
     xticklabels = yticklabels = 'auto' if stack is None else stack.values()
