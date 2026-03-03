@@ -142,6 +142,8 @@ class NakoBase(BaseDataset):
                 self.osim = osim.reset_index(drop=True)
             self.cond_cols = self.osim.columns[3:]   # ignore 'id', 'nako_path', and 'osim_path'
             self.target_cols = self.get_targets('L[1-6]_coord')
+        else:
+            self.osim = osim
 
     @staticmethod
     def _get_vibe_mask_path(path: str) -> str:
