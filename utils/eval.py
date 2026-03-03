@@ -446,6 +446,113 @@ def barplot_metric(
         plt.show()
 
 
+def plot_correlation(path: str, figsize: tuple = (10, 10), stack: Optional[Iterable[str]] = None) -> None:
+    dataset = pd.read_csv(path)
+    dataset = dataset.drop(['id', 'task', 'nifti_path'], axis='columns')
+    if isinstance(stack, Iterable):
+        dataset = stack_df_columns(dataset, stack)
+    else:
+        dataset = dataset[dataset.columns[:121]]
+    corr = dataset.corr()
+    mask = np.triu(np.ones_like(corr, dtype=bool), k=1)    # TODO
+
+    fig, ax = plt.subplots(figsize=figsize)
+    xticklabels = yticklabels = 'auto' if stack is None else stack.values()
+    sns.heatmap(corr, mask=mask, cmap='coolwarm', square=True, vmin=-1, vmax=1,
+                xticklabels=xticklabels, yticklabels=yticklabels, cbar_kws={"shrink": .5})
+    plt.tight_layout()
+    plt.show()
+
+
+# COMPARING MODELS
+def compare_distributions(
+    preds: str = 'eval/compr/eval_val.csv',
+    data: str = 'csv/Optim_0.csv',
+    difference: bool = False,
+    scale: bool = False,
+    stack: Optional[Iterable] = None,
+    **kwargs,
+) -> None:
+    dataset = pd.read_csv(data)
+    _, val_idx, test_idx = get_splits(data.replace('.csv', '.npz'), dataset)
+    preds = pd.read_csv(preds).filter(regex='pred-')
+    if stack is None:
+        dataset = dataset.iloc[test_idx].filter(regex='compr')
+        preds.columns = preds.columns.str.replace('pred-', '')
+    else:
+        dataset = dataset.iloc[test_idx][stack.keys()]
+        preds.columns = stack.values()
+
+    # Histograms
+    if difference:
+        dataset.reset_index(inplace=True, drop=True)
+        preds.reset_index(inplace=True, drop=True)
+        dataset -= preds    # unary operators act on index intersections
+        avg = dataset.mean()
+        if scale:
+            dataset /= dataset.std()
+        dataset.hist(label='Difference', **kwargs)
+    else:
+        ax = dataset.hist(label='Data', alpha=0.7, **kwargs)
+        preds.hist(ax=ax, label='Model', alpha=0.7, **kwargs)
+        plt.legend(loc='upper right')
+    plt.tight_layout()
+    plt.show()
+
+
+def compare_models(
+    *eval_files: Tuple[str, str],
+    metric: Callable = absolute_error,
+    width: float = 0.25,
+    figsize: tuple = (8, 5),
+    stack: Optional[Iterable[str]] = None
+):
+    fig, ax = plt.subplots(figsize=figsize)
+    factor = 0
+    offset_ticks = (len(eval_files) * width - width) / 2
+    labels = pd.Index([item[1] for item in eval_files])
+
+    pivot = {l: pd.read_csv(p) for p, l in eval_files}
+    for l, d in pivot.items():
+        d = d.filter(regex=metric.__name__ + '-')
+        d = stack_df_columns(d, stack=stack)
+        # d.drop(columns='id', inplace=True)
+        d.insert(0, 'label', l)
+        pivot[l] = d
+    df = pd.concat([d for d in pivot.values()], ignore_index=True)
+
+    # define the first model in eval_files as the base reference
+    base = df[df['label'] == labels[0]]
+    base = base[base.columns[~base.columns.str.contains('label')]].mean()
+    # base['label'] = labels[0]
+
+    for label, df in pivot.items():
+        if label == labels[0]:
+            continue
+        offset = width * factor
+        if metric.__name__ == 'rmse':
+            base = rmse(base)
+        df = df.filter(regex=metric.__name__ + '-')
+        df = df.mean()
+        # scale values to the reference model
+        # df = df.apply(scale, base=base)
+        df /= base
+        df *= 100
+        # vals = rmse(df)
+        x = np.arange(len(df.index)) * ((len(eval_files) + 1) * width) + offset
+        bar = ax.bar(x, df.values, label=label, width=width, alpha=0.75)
+        ax.bar_label(bar, fmt='{:.2f}%', label_type='edge')
+        factor += 1
+
+    labels = list(stack.values()) if isinstance(stack, dict) else stack
+    ax.set_xticks(x - offset_ticks, labels, rotation=90)
+    ax.grid(axis='y', linewidth=0.5, linestyle='--')
+    plt.ylabel(metric.__name__.replace('_', ' ').capitalize())
+    plt.legend(bbox_to_anchor=(1.1, 0.6))
+    plt.tight_layout()
+    plt.show()
+
+
 # DEBUG
 # if __name__ == '__main__':
 #     plot_metric('abs_err', '../data/eval/eval.csv', 'test')
