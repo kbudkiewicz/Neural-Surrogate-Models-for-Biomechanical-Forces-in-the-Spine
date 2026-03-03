@@ -273,13 +273,18 @@ def remove_outliers(df: pd.DataFrame, threshold: float = 1e2) -> pd.DataFrame:
     return df[mask.all(axis=1)]
 
 
+def set_ylabel(ax, metric: Callable):
+    ylabel = metric.__name__.replace('_', ' ').capitalize()
+    if ax.get_yscale() == 'log':
+        ylabel = 'Log ' + ylabel.lower()
+    ax.set_ylabel(ylabel)
+
+
 def set_boxplot_bounds(metric: Callable, bottom: float = 0., top: float = 3.):
     if metric.__name__ == 'relative_error':
-        # lower, upper = max(0, df.min().min()), min(2, df.max().max())
         plt.ylim([0, 5])
     elif metric.__name__ == 'absolute_error':
         plt.yscale('log')
-        plt.ylabel(f'Log {metric.__name__.replace('_', ' ')}')
     else:
         plt.ylim(bottom=bottom, top=top)
 
@@ -311,6 +316,7 @@ def plot_metric(
     plt.boxplot(df.values, tick_labels=tick_labels, meanline=True, showmeans=True)
     plt.ylabel(metric.__name__.replace('_', ' ').capitalize())
     set_boxplot_bounds(metric=metric)
+    set_ylabel(ax, metric=metric)
     plt.xticks(rotation=90)
     if title is not None:
         plt.title('Dataset: ' + title)
