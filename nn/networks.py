@@ -1,4 +1,5 @@
 import torchvision.models.video as video_models
+from torchvision.models.video.swin_transformer import SwinTransformer3d
 from torchvision.models.video.resnet import Conv3DSimple, BasicBlock, VideoResNet
 from . import *
 from typing import Optional
@@ -84,3 +85,25 @@ class Chimera(Module):
         x = self.backbone(x)
         x = self.mlp(x + conditioning)
         return x
+
+
+# VisionTransformer
+class SwinTransformer3DRegressor(Module):
+    """Basic SwinTransformer3D regression network.
+
+    .. note::
+        The parameters of the small SwinTransformer3D model are used."""
+    def __init__(self, out_features: int):
+        super().__init__()
+        self.backbone = SwinTransformer3d(
+            patch_size=[2, 4, 4],
+            embed_dim=96,
+            depths=[2, 2, 18, 2],
+            num_heads=[3, 6, 12, 24],
+            window_size=[8, 7, 7],
+            stochastic_depth_prob=0.1,
+        )
+        self.backbone.head = nn.Linear(self.backbone.num_features, out_features)
+
+    def forward(self, x: Tensor) -> Tensor:
+        return self.backbone(x)
