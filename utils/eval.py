@@ -452,7 +452,7 @@ def barplot_metric(
         plt.show()
 
 
-def plot_correlation(path: str, figsize: tuple = (10, 10), stack: Optional[Iterable[str]] = None) -> None:
+def plot_correlation(path: str, figsize: tuple = (12, 12), stack: Optional[Iterable[str]] = None, **kwargs) -> None:
     dataset = pd.read_csv(path)
     dataset = dataset.drop(['id', 'task', 'nifti_path'], axis='columns')
     if isinstance(stack, Iterable):
@@ -464,8 +464,8 @@ def plot_correlation(path: str, figsize: tuple = (10, 10), stack: Optional[Itera
 
     fig, ax = plt.subplots(figsize=figsize)
     xticklabels = yticklabels = 'auto' if stack is None else stack.values()
-    sns.heatmap(corr, mask=mask, cmap='coolwarm', square=True, vmin=-1, vmax=1,
-                xticklabels=xticklabels, yticklabels=yticklabels, cbar_kws={"shrink": .5})
+    sns.heatmap(corr.round(2), mask=mask, cmap='coolwarm', square=True, vmin=-1, vmax=1,
+                xticklabels=xticklabels, yticklabels=yticklabels, cbar_kws={"shrink": .5}, **kwargs)
     plt.tight_layout()
     plt.show()
 
