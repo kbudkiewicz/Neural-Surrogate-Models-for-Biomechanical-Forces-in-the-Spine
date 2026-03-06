@@ -472,8 +472,8 @@ def plot_correlation(path: str, figsize: tuple = (10, 10), stack: Optional[Itera
 
 # COMPARING MODELS
 def compare_distributions(
-    preds: str = 'eval/compr/eval_val.csv',
-    data: str = 'csv/Optim_0.csv',
+    predictions: str,
+    data: str,
     difference: bool = False,
     scale: bool = False,
     stack: Optional[Iterable] = None,
@@ -481,27 +481,31 @@ def compare_distributions(
 ) -> None:
     dataset = pd.read_csv(data)
     _, val_idx, test_idx = get_splits(data.replace('.csv', '.npz'), dataset)
-    preds = pd.read_csv(preds).filter(regex='pred-')
+    preds = pd.read_csv(predictions).filter(regex='pred-')
+    preds.columns = preds.columns.str.replace('pred-', '')
+
     if stack is None:
-        dataset = dataset.iloc[test_idx].filter(regex='compr')
-        preds.columns = preds.columns.str.replace('pred-', '')
+        dataset = dataset[preds.columns]
     else:
         dataset = dataset.iloc[test_idx][stack.keys()]
-        preds.columns = stack.values()
+        preds = preds[stack.keys()]
+    dataset.reset_index(inplace=True, drop=True)
+    preds.reset_index(inplace=True, drop=True)
 
     # Histograms
     if difference:
-        dataset.reset_index(inplace=True, drop=True)
-        preds.reset_index(inplace=True, drop=True)
         dataset -= preds    # unary operators act on index intersections
-        avg = dataset.mean()
         if scale:
             dataset /= dataset.std()
-        dataset.hist(label='Difference', **kwargs)
+        ax = dataset.hist(label='Difference', **kwargs)
     else:
         ax = dataset.hist(label='Data', alpha=0.7, **kwargs)
         preds.hist(ax=ax, label='Model', alpha=0.7, **kwargs)
         plt.legend(loc='upper right')
+    if stack is not None:
+        for axis, label in zip(ax.flat, stack.values()):
+            axis.set_title(label)
+
     plt.tight_layout()
     plt.show()
 
