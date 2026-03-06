@@ -93,16 +93,26 @@ class SwinTransformer3DRegressor(Module):
 
     .. note::
         The parameters of the small SwinTransformer3D model are used."""
-    def __init__(self, out_features: int):
+    def __init__(self, in_channels: int, out_features: int):
         super().__init__()
         self.backbone = SwinTransformer3d(
+            ### small
             patch_size=[2, 4, 4],
             embed_dim=96,
             depths=[2, 2, 18, 2],
             num_heads=[3, 6, 12, 24],
             window_size=[8, 7, 7],
             stochastic_depth_prob=0.1,
+            ### tiny
+            # patch_size=[2, 4, 4],
+            # embed_dim=96,
+            # depths=[2, 2, 6, 2],
+            # num_heads=[3, 6, 12, 24],
+            # window_size=[8, 7, 7],
+            # stochastic_depth_prob=0.1,
         )
+        # Line 417 in swin_transformer.py
+        self.backbone.patch_embed = PatchEmbed3d(in_channels=in_channels, patch_size=[2, 4, 4], norm_layer=nn.LayerNorm)
         self.backbone.head = nn.Linear(self.backbone.num_features, out_features)
 
     def forward(self, x: Tensor) -> Tensor:
