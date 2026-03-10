@@ -480,31 +480,40 @@ def compare_distributions(
     **kwargs,
 ) -> None:
     dataset = pd.read_csv(data)
-    _, val_idx, test_idx = get_splits(data.replace('.csv', '.npz'), dataset)
-    preds = pd.read_csv(predictions).filter(regex='pred-')
-    preds.columns = preds.columns.str.replace('pred-', '')
 
-    if stack is None:
-        dataset = dataset[preds.columns]
-    else:
-        dataset = dataset.iloc[test_idx][stack.keys()]
-        preds = preds[stack.keys()]
+    if isinstance(predictions, str):
+        preds = pd.read_csv(predictions).filter(regex='pred-')
+        preds.columns = preds.columns.str.replace('pred-', '')
+        if stack is not None:
+            preds = preds[stack.keys()]
+        preds.reset_index(inplace=True, drop=True)
+        _, val_idx, test_idx = get_splits(data.replace('.csv', '.npz'), dataset)
+        dataset = dataset.iloc[test_idx]
+
+    if stack is not None:
+        dataset = stack_df_columns(dataset, stack=stack)
     dataset.reset_index(inplace=True, drop=True)
-    preds.reset_index(inplace=True, drop=True)
 
     # Histograms
     if difference:
-        dataset -= preds    # unary operators act on index intersections
+        dataset -= preds  # unary operators act on index intersections
         if scale:
             dataset /= dataset.std()
         ax = dataset.hist(label='Difference', **kwargs)
     else:
-        ax = dataset.hist(label='Data', alpha=0.7, **kwargs)
-        preds.hist(ax=ax, label='Model', alpha=0.7, **kwargs)
-        plt.legend(loc='upper right')
-    if stack is not None:
-        for axis, label in zip(ax.flat, stack.values()):
-            axis.set_title(label)
+        ax = dataset.hist(label='Data', **kwargs)
+        if predictions is not None:
+            preds.hist(ax=ax, label='Model', **kwargs)
+            plt.legend(loc='upper right')
+
+    # Labeling and titles
+    for idx, axis in enumerate(ax.flat):
+        axis.set_xlabel('Force [N]')
+        axis.set_ylabel('Frequency')
+        if stack is not None and idx in range(len(stack)):
+            titles = list(stack.values())
+            title = titles[idx]
+            axis.set_title(title)
 
     plt.tight_layout()
     plt.show()
