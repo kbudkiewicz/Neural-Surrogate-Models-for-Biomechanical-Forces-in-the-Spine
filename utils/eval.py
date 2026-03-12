@@ -174,6 +174,22 @@ def print_mean_std(csv_filename: str, keywords: str, stack: bool = False):
             print_values(df_slice, column_name)
 
 
+def stack_df_columns(df: pd.DataFrame, stack: Iterable[str]) -> pd.DataFrame:
+    """Stack all columns containing the same string or regex in stack to a single column."""
+    stacked_series = []
+    for string in stack:
+        cols = df.columns[df.columns.str.contains(string)]
+        df_copy = df[cols]
+        if len(cols) > 1:
+            melt = df_copy.melt(value_name=string)
+            values = melt[string].reset_index(drop=True)
+        else:
+            values = df_copy
+        stacked_series.append(values)
+
+    return pd.concat(stacked_series, axis=1)
+
+
 def eval_to_latex(
     *metrics: Union[Callable, str],
     path: str,
@@ -230,24 +246,6 @@ def eval_to_latex(
 
 
 # --- Plotting ---
-def stack_df_columns(df: pd.DataFrame, stack: Iterable[str]) -> pd.DataFrame:
-    """Stack all columns containing the same string or regex in stack to a single column."""
-    stacked_series = []
-    for string in stack:
-        cols = df.columns[df.columns.str.contains(string)]
-        df_copy = df[cols]
-        if len(cols) > 1:
-            melt = df_copy.melt(value_name=string)
-            values = melt[string].reset_index(drop=True)
-        elif len(cols) == 1:
-            values = df_copy
-        else:
-            raise ValueError(f'Column {string} contains no values')
-        stacked_series.append(values)
-
-    return pd.concat(stacked_series, axis=1)
-
-
 def stack_df_for_boxplot(df: pd.DataFrame, stack: Iterable[str]) -> pd.DataFrame:
     """
     Melts columns that contain any of the substrings in 'stack' into a long format.
