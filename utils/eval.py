@@ -480,6 +480,7 @@ def compare_distributions(
     **kwargs,
 ) -> None:
     dataset = pd.read_csv(data)
+    rect = None
 
     if isinstance(predictions, str):
         preds = pd.read_csv(predictions).filter(regex='pred-')
@@ -501,10 +502,14 @@ def compare_distributions(
             dataset /= dataset.std()
         ax = dataset.hist(label='Difference', **kwargs)
     else:
-        ax = dataset.hist(label='Data', **kwargs)
+        ax = dataset.hist(label='Ground Truth', **kwargs)
         if predictions is not None:
-            preds.hist(ax=ax, label='Model', **kwargs)
-            plt.legend(loc='upper right')
+            preds.hist(ax=ax, label='Model', alpha=0.7, **kwargs)
+            fig = ax.flat[0].get_figure()
+            # Get handles and labels from just the first axis to avoid duplicates
+            handles, labels = ax.flat[0].get_legend_handles_labels()
+            fig.legend(handles, labels, loc='upper center', ncol=2)
+            rect = [0, 0, 1, 0.99]
 
     # Labeling and titles
     for idx, axis in enumerate(ax.flat):
@@ -514,7 +519,7 @@ def compare_distributions(
             titles = list(stack.values())
             axis.set_title(titles[idx])
 
-    plt.tight_layout()
+    plt.tight_layout(rect=rect)
     plt.show()
 
 
