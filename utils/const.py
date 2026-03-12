@@ -33,7 +33,11 @@ def shearcompr_map(x: Iterable[str]) -> list:
 def muscles_map(x: Iterable[str], use_abbrev: bool = True) -> list:
     rem_g = lambda s: s.replace('__G_', ' ').replace('G_', '').replace('__F_', ' ').replace('F_', '')
     rem__ = lambda s: s.replace('_', ' ')
+    rem_ribcage = lambda s: s.replace('Ribcage_musc', '')
+    capitalize_first = lambda s: s.title()
     x = list(map(rem_g, x))
+    x = list(map(rem_ribcage, x))
+    x = list(map(capitalize_first, x))
 
     if use_abbrev:
         for key, value in _MUSCLES_ABBREV.items():
@@ -89,15 +93,15 @@ _MUSCLES: list = ['F_Ribcage_musc_rect_abdom_l',
                   'G_medial__G_multifidus__G_lumbar__G_left__F_S',
                   'G_medial__G_multifidus__G_lumbar__G_right__F']
 _MUSCLES_ABBREV: dict = {
-    'rect_abdom': 'RA',
-    'internal_oblique': 'IO',
-    'external_oblique': 'EO',
-    'psoas_major': 'PM',
-    'quadratus_lumborum': 'QL',
-    'multifidus': 'MF',
-    'longissimus_thoracis': 'LTL',
-    'iliocostalis_lumborum': 'IL',
-    'interspinales': 'IS'
+    'Rect_Abdom': 'RA',
+    'Internal_Oblique': 'IO',
+    'External_Oblique': 'EO',
+    'Psoas_Major': 'PM',
+    'Quadratus_Lumborum': 'QL',
+    'Multifidus': 'MF',
+    'Longissimus_Thoracis': 'LTL',
+    'Iliocostalis_Lumborum': 'IL',
+    'Interspinales': 'IS'
 }
 _MUSCLES_D = dict(zip(_MUSCLES, muscles_map(_MUSCLES, use_abbrev=True)))
 _PRELIMINARIES_D = dict(**_COMPRESSION_D, **_SHEAR_D, **_MUSCLES_D)
