@@ -472,11 +472,11 @@ def plot_correlation(path: str, figsize: tuple = (12, 12), stack: Optional[Itera
 
 # COMPARING MODELS
 def compare_distributions(
-    predictions: str,
     data: str,
     difference: bool = False,
     scale: bool = False,
-    stack: Optional[Iterable] = None,
+    predictions: Optional[str] = None,
+    stack: Optional[dict] = None,
     **kwargs,
 ) -> None:
     dataset = pd.read_csv(data)
@@ -484,14 +484,14 @@ def compare_distributions(
     if isinstance(predictions, str):
         preds = pd.read_csv(predictions).filter(regex='pred-')
         preds.columns = preds.columns.str.replace('pred-', '')
-        if stack is not None:
-            preds = preds[stack.keys()]
-        preds.reset_index(inplace=True, drop=True)
         _, val_idx, test_idx = get_splits(data.replace('.csv', '.npz'), dataset)
         dataset = dataset.iloc[test_idx]
+        preds.reset_index(inplace=True, drop=True)
 
     if stack is not None:
         dataset = stack_df_columns(dataset, stack=stack)
+        if predictions is not None:
+            preds = stack_df_columns(preds, stack=stack)
     dataset.reset_index(inplace=True, drop=True)
 
     # Histograms
@@ -510,10 +510,9 @@ def compare_distributions(
     for idx, axis in enumerate(ax.flat):
         axis.set_xlabel('Force [N]')
         axis.set_ylabel('Frequency')
-        if stack is not None and idx in range(len(stack)):
+        if stack is not None and idx < len(stack):
             titles = list(stack.values())
-            title = titles[idx]
-            axis.set_title(title)
+            axis.set_title(titles[idx])
 
     plt.tight_layout()
     plt.show()
