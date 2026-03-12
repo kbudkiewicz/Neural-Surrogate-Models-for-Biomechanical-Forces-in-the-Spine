@@ -367,20 +367,31 @@ def plot_compare_models_bar(
     else:
         plt.show()
 
+
+def get_slices(stack: dict) -> tuple[slice, slice]:
+    if stack == _COORDS_D:
+        return slice(3), slice(3, len(_COORDS_D))
+    elif stack == _COORDS_ALL_D or _PRELIMINARIES_D:
+        return slice(18), slice(18, len(_PRELIMINARIES_D))
+    else:
+        raise ValueError('Unsupported stack type.')
+
+
 def barplot_metric(
     *eval_files: Tuple[str, str],
     metric: Union[Callable, str],
     width: float = 0.25,
-    alpha: float = 0.75,
     figsize: tuple = (8, 5),
     remove: bool = False,
     log: bool = False,
-    stack: Optional[Iterable[str]] = None,
+    stack: Optional[dict] = None,
+    dataset: Optional[pd.DataFrame] = None,
     plot_name: Optional[str] = None,
+    **plt_kwargs
 ):
     def get_ylabels(metric, log: bool) -> Iterable[str]:
-        if metric == 'rmse':
-            l_ylabel, r_ylabel = 'RMSE [Nm]', 'RMSE [N]'
+        if metric in ['rmse', 'nrmse']:
+            l_ylabel, r_ylabel = 'RMSE [N]', 'RMSE [Nm]'
         else:
             l_ylabel = r_ylabel = metric.__name__.replace('_', ' ').capitalize() + ' [-]'
         if log:
@@ -391,7 +402,7 @@ def barplot_metric(
     if stack == _COORDS_D:
         fig, axes = plt.subplots(1, 2, figsize=figsize)
         ax, ax2 = axes
-    elif stack == _PRELIMINARIES_D:
+    elif stack == _PRELIMINARIES_D or _COORDS_ALL_D:
         fig, axes = plt.subplots(2, 1, figsize=figsize)
         ax, ax2 = axes
     else:
@@ -402,28 +413,33 @@ def barplot_metric(
     for file, label in eval_files:
         offset = width * factor
         df = pd.read_csv(file).drop(columns='id')
-        regex = 'absolute_error-' if metric == 'rmse' else metric.__name__ + '-'
+        regex = 'absolute_error-' if metric in ['rmse', 'nrmse'] else metric.__name__ + '-'
         df = df.filter(regex=regex)
         if remove:
             df = remove_outliers(df)
         if isinstance(stack, Iterable):
             df = stack_df_columns(df, stack)
         x = np.arange(len(df.columns)) * ((len(eval_files) + 1) * width) + offset
-        values = rmse(df) if metric == 'rmse' else df.mean(axis=0)
 
-        if stack == _COORDS_D or _PRELIMINARIES_D:
-            if stack == _COORDS_D:
-                left, right = slice(3), slice(3, len(_COORDS_D))
-            elif stack == _PRELIMINARIES_D:
-                left, right = slice(18), slice(18, len(_PRELIMINARIES_D))
-            torques, forces = values[left], values[right]
-            ax.bar(x[left], torques, label=label, log=log, width=width,  alpha=alpha)
-            ax2.bar(x[right], forces, label=label, log=log, width=width, alpha=alpha)
+        if metric == 'rmse':
+            values = rmse(df)
+        elif metric == 'nrmse':
+            if dataset is None:
+                raise ValueError('nRMSE: No reference test or validation set is given')
+            values = nrmse(df, dataset[df.columns.str.replace('absolute_error-', '')])
         else:
-            ax.bar(x, values, label=label, log=log, width=width, alpha=alpha)
+            df.mean(axis=0)
+
+        if stack == _COORDS_D or _COORDS_ALL_D or _PRELIMINARIES_D:
+            left, right = get_slices(stack)
+            torques, forces = values[left], values[right]
+            ax.bar(x[left], torques, label=label, log=log, width=width, **plt_kwargs)
+            ax2.bar(x[right], forces, label=label, log=log, width=width, **plt_kwargs)
+        else:
+            ax.bar(x, values, label=label, log=log, width=width, **plt_kwargs)
         factor += 1
 
-    if stack == _COORDS_D or stack == _PRELIMINARIES_D:
+    if stack == _COORDS_D or _COORDS_ALL_D or _PRELIMINARIES_D:
         xlabels = list(stack.values())
         l_ylabel, r_ylabel = get_ylabels(metric, log=log)
         ax.set_xticks(x[left] - offset_ticks, xlabels[left], rotation=90)
