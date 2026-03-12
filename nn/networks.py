@@ -1,5 +1,5 @@
 import torchvision.models.video as video_models
-from torchvision.models.video.swin_transformer import SwinTransformer3d
+from torchvision.models.video.swin_transformer import SwinTransformer3d, PatchEmbed3d
 from torchvision.models.video.resnet import Conv3DSimple, BasicBlock, VideoResNet
 from . import *
 from typing import Optional
