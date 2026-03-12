@@ -4,8 +4,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from utils.const import (_COORDS, _COORDS_D, _COMPRESSION, _COMPRESSION_D, _SHEAR, _SHEAR_D,
-                         _SHEARCOMPR, _SHEARCOMPR_D, _MUSCLES, _MUSCLES_D, _PRELIMINARIES_D)
+from utils.const import (_COMPRESSION_D, _SHEAR_D, _SHEARCOMPR_D, _MUSCLES_D, _PRELIMINARIES_D, _COORDS_D, _FORCES_D,
+                         _MOMENTS_D, _COORDS_ALL_D)
 from typing import Tuple, Optional, Union, Iterable, Callable
 from utils.preprocessing import wrap_dataloader
 from data.utils import rename_if_exists
