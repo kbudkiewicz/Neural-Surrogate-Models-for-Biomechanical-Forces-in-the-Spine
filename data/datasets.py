@@ -12,6 +12,7 @@ from torch.utils.data import Dataset
 
 
 class BaseDataset(Dataset):
+    """Base class for datasets on the IBBM server."""
     def __init__(self, df, target_cols: str, resolution: int = 128, conditioning: bool = False, augment: bool = False):
         if isinstance(df, str):
             self.df = pd.read_csv(df)

@@ -37,6 +37,13 @@ def rmse(df: pd.DataFrame):
 
 
 def import_weights(model: Module, weights: str, device: Union[str, torch.device]):
+    r"""Try to import model weights to a model. Otherwise, evaluate with an untrained model.
+
+    Args:
+        model (Module): Model to import.
+        weights (str): Absolute path to model state dictionary.
+        device (Union[str, torch.device]): Device on which to perform the evaluation.
+    """
     try:
         state_dict = torch.load(weights, map_location=device)
         model.load_state_dict(state_dict)
@@ -295,7 +302,20 @@ def plot_metric(
     stack: Optional[Iterable[str]] = None,
     title: Optional[str] = None,
     plot_name: Optional[str] = None
-):
+) -> None:
+    """
+    Plot previously calculated metrics from an evaluation file.
+
+    Args:
+        metric (Callable): Metric function to be evaluated. Should take two Tensors and return one.
+        eval_file (str): Relative path to the evaluation file in csv format.
+        stack (Iterable[str], optional): Iterable of column names to concatenate. If provided, the function will stack
+            all values from columns containing a substring into a single column and calculate the metric over it.
+        title (str, optional): Title of the plot.
+        plot_name (str, optional): Name of the plot to be saved.
+    """
+    matplotlib.rcParams['boxplot.meanprops.color'] = 'k'
+    matplotlib.rcParams['boxplot.meanprops.linestyle'] = '-.'
     df = pd.read_csv(eval_file)
     header = df.columns
     cols = header[header.str.contains(metric.__name__ + '-')]

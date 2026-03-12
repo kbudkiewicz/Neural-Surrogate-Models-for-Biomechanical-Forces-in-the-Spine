@@ -46,7 +46,7 @@ def muscles_map(x: Iterable[str], use_abbrev: bool = True) -> list:
     return list(map(rem__, x))
 
 
-# Preliminaries
+# PRELIMINARIES: Use compr__L, etc. for the newest models and evals. NAKO: shear__Y_L, etc.
 _COMPRESSION: list = [f'compr__Y_L{i}' for i in range(1, 6)]
 _COMPRESSION.append('compr__Y_T12')
 _COMPRESSION_D = dict(zip(_COMPRESSION, compr_map(_COMPRESSION)))
