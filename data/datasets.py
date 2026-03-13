@@ -115,6 +115,7 @@ class BaseDataset(Dataset):
         return len(self.df)
 
 
+# NAKO Datasets
 class NakoDataset(BaseDataset):
     def __init__(self, df, target_cols: str = 'coord', augment: bool = False):
         super().__init__(df, target_cols, augment)
@@ -182,6 +183,34 @@ class NakoBase(BaseDataset):
         x = self.load_nifti(x)
         x = self._interpolate(x)
         return x
+
+
+class NakoVibeDataset(NakoBase):
+    """
+    Dataset containing only in-phase and out-phase vibe images.
+    """
+    def __init__(self, df, target_cols: str = 'coord', osim: Optional[str] = None):
+        super().__init__(df, target_cols, osim=osim)
+
+    def __getitem__(self, idx: int) -> Tuple[Tensor, Tensor, Union[Tensor, float]]:
+        t2w_img_path = self.df.iloc[idx][self.paths_key]
+        vibe_img_path = t2w_img_path.replace('/T2w', '/vibe')
+        inphase_img_path = vibe_img_path.replace('-sag_T2w.nii.gz', '-ax_part-inphase_vibe.nii.gz')
+        outphase_img_path = vibe_img_path.replace('-sag_T2w.nii.gz', '-ax_part-outphase_vibe.nii.gz')
+
+        inphase_image = NII.load(inphase_img_path, False)
+        outphase_image = NII.load(outphase_img_path, False)
+        inphase_image = self.preprocess_image(inphase_image)
+        outphase_image = self.preprocess_image(outphase_image)
+
+        img = torch.cat([inphase_image, outphase_image], dim=0)
+        target = torch.tensor(self.df.iloc[idx][self.target_cols].to_numpy(np.float32))
+
+        if self.osim is not None:
+            conditioning = self.load_osim(idx)
+        else:
+            conditioning = torch.nan
+        return img, target, conditioning
 
 
 class NakoImagesDataset(NakoBase):
