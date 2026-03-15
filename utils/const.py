@@ -121,9 +121,20 @@ def coord_to_math(x: str) -> str:
     return f'${type}_{axis}$ {vertebra}'
 
 
+def sort_order(x: str, order: str = 'axis'):
+    x = x.split('_')
+    vertebra, axis = x[0], x[2]
+    if order == 'vertebra':
+        return vertebra + axis
+    elif order == 'axis':
+        return axis + vertebra
+    else:
+        raise ValueError('Unexpected order. Expected "vertebra" or "axis".')
+
+
 df = pd.read_csv('../data/csv/nako_zeroed.csv')
-NAKO_FORCES = sorted(df.columns[df.columns.str.contains('force')])
-NAKO_MOMENTS = sorted(df.columns[df.columns.str.contains('moment')])
+NAKO_FORCES = sorted(df.columns[df.columns.str.contains('force')], key=sort_order)
+NAKO_MOMENTS = sorted(df.columns[df.columns.str.contains('moment')], key=sort_order)
 _FORCES_D = dict(zip(NAKO_FORCES, map(coord_to_math, NAKO_FORCES)))
 _MOMENTS_D = dict(zip(NAKO_MOMENTS, map(coord_to_math, NAKO_MOMENTS)))
 NAKO_FORCES.extend(NAKO_MOMENTS)
