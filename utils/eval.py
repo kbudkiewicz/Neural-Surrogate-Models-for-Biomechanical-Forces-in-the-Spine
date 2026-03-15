@@ -488,21 +488,32 @@ def barplot_metric(
         plt.show()
 
 
-def plot_correlation(path: str, figsize: tuple = (12, 12), stack: Optional[Iterable[str]] = None, **kwargs) -> None:
+def plot_correlation(
+    path: str,
+    figsize: tuple = (15, 12),
+    use_mask: bool = True,
+    stack: Optional[Iterable[str]] = None,
+    plot_name: Optional[str] = None,
+    **kwargs
+) -> None:
     dataset = pd.read_csv(path)
-    dataset = dataset.drop(['id', 'task', 'nifti_path'], axis='columns')
+    columns_to_drop = ['id', 'nako_path'] if 'nako' in path else ['id', 'task', 'nifti_path']
+    dataset = dataset.drop(columns_to_drop, axis='columns')
     if isinstance(stack, Iterable):
         dataset = stack_df_columns(dataset, stack)
     else:
         dataset = dataset[dataset.columns[:121]]
     corr = dataset.corr()
-    mask = np.triu(np.ones_like(corr, dtype=bool), k=1)
+    mask = np.triu(np.ones_like(corr, dtype=bool), k=1) if use_mask else None
 
-    fig, ax = plt.subplots(figsize=figsize)
+    plt.subplots(figsize=figsize)
     xticklabels = yticklabels = 'auto' if stack is None else stack.values()
     sns.heatmap(corr.round(2), mask=mask, cmap='coolwarm', square=True, vmin=-1, vmax=1,
                 xticklabels=xticklabels, yticklabels=yticklabels, cbar_kws={"shrink": .5}, **kwargs)
     plt.tight_layout()
+
+    if plot_name:
+        plt.savefig(plot_name, bbox_inches='tight', format='pdf')
     plt.show()
 
 
