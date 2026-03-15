@@ -566,10 +566,14 @@ def compare_distributions(
     # Labeling and titles
     for idx, axis in enumerate(ax.flat):
         axis.set_xlabel('Force [N]')
-        axis.set_ylabel('Frequency')
         if stack is not None and idx < len(stack):
             titles = list(stack.values())
+            if 'M_' in titles[idx]:
+                axis.set_xlabel('Moment [Nm]')
             axis.set_title(titles[idx])
+    # Add ylabel only to the left subplots
+    for axis in ax:
+        axis[0].set_ylabel('Frequency')
 
     plt.tight_layout(rect=rect)
     plt.show()
