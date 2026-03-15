@@ -28,12 +28,17 @@ def absolute_error_by_std(pred: Tensor, target: Tensor, std) -> Tensor:
     return torch.abs(target - pred) / (std + 1e-8)
 
 
-# def mean_absolute_deviation(pred: Tensor, target: Tensor) -> Tensor:
-#     return torch.abs(pred - torch.mean(target)) / len(target)
+def mse(pred: Tensor, target: Tensor) -> Tensor:
+    return torch.square(target - pred) / (torch.square(target) + 1e-8)
 
 
-def rmse(df: pd.DataFrame):
+def rmse(df: pd.DataFrame) -> pd.Series:
     return np.sqrt(df.pow(2).mean())
+
+
+def nrmse(df: pd.DataFrame, dataset: pd.DataFrame) -> pd.Series:
+    normalized_rmse = rmse(df).values / dataset.std().values
+    return pd.Series(normalized_rmse, index=df.columns)
 
 
 def import_weights(model: Module, weights: str, device: Union[str, torch.device]):
