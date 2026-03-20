@@ -529,6 +529,7 @@ def compare_distributions(
     scale: bool = False,
     predictions: Optional[str] = None,
     stack: Optional[dict] = None,
+    transform: Optional[Callable] = None,
     **kwargs,
 ) -> None:
     dataset = pd.read_csv(data)
@@ -540,6 +541,10 @@ def compare_distributions(
         _, val_idx, test_idx = get_splits(data.replace('.csv', '.npz'), dataset)
         dataset = dataset.iloc[test_idx]
         preds.reset_index(inplace=True, drop=True)
+
+    # Yeo-Johnson transformation has to be performed for each variable separately so that each distribution is normalized
+    if transform is not None:
+        dataset = dataset.apply(transform, axis=0)
 
     if stack is not None:
         dataset = stack_df_columns(dataset, stack=stack)
