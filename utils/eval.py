@@ -11,6 +11,7 @@ from utils.const import (_COMPRESSION_D, _SHEAR_D, _SHEARCOMPR_D, _MUSCLES_D, _P
 from typing import Tuple, Optional, Union, Iterable, Callable
 from utils.preprocessing import wrap_dataloader, get_splits
 from data.utilities import rename_if_exists
+from scipy.stats import normaltest, shapiro
 from torch import Tensor
 from torch.nn import Module
 from torch.utils.data import DataLoader
@@ -256,6 +257,37 @@ def eval_to_latex(
     return styler.to_latex(position='h', column_format=column_format, position_float='centering',
                            multicol_align='c', hrules=True, convert_css=True, **kwargs)
 
+def normality_test(
+    path: str,
+    buf: Optional[str] = None,
+    stack: Optional[dict] = None,
+):
+    df = pd.read_csv(path)
+    columns = df.columns
+    if stack is not None:
+        df = stack_df_columns(df, stack)
+        columns = pd.Index(stack.values())
+    stat, p = normaltest(df, nan_policy='omit')  # omnibus formula
+    m = df.apply(shapiro, axis=0, nan_policy='omit')
+    m.columns = columns
+
+    index_dagostino = pd.MultiIndex.from_product(
+        [['D\'Agostino omnibus'], ['$K^2 \\times 10^3$', '$p$-value $\\times 10^{-6}$']], names=['Force', '']
+    )
+    index_shapiro = pd.MultiIndex.from_product(
+        [['Shapiro-Wilk'], ['$W$', '$p$-value $\\times 10^{-6}$']], names=['Force', '']
+    )
+    dagostino_values = pd.DataFrame([stat / 1e3, p * 1e6], index=index_dagostino, columns=columns)
+    shapiro_values = pd.DataFrame([m.iloc[0], m.iloc[1] * 1e6], index=index_shapiro)
+    results = pd.concat([dagostino_values, shapiro_values])
+
+    # Add styling
+    results = results.T
+    styler = results.style.map_index(lambda x: 'font-weight: bold;', axis='columns')  # columns in bold
+    styler.format(precision=2)  # float precision
+    column_format = 'l' + 'c' * len(results.columns)
+    return styler.to_latex(position='h', column_format=column_format, position_float='centering',
+                           multicol_align='c', hrules=True, convert_css=True, buf=buf)
 
 # --- Plotting ---
 def stack_df_for_boxplot(df: pd.DataFrame, stack: Iterable[str]) -> pd.DataFrame:
