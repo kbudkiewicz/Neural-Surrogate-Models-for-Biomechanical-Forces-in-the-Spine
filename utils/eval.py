@@ -17,6 +17,10 @@ from torch.nn import Module
 from torch.utils.data import DataLoader
 
 
+NIFTI_DROP = ['id', 'task', 'nifti_path']
+NAKO_DROP = ['id', 'nako_path']
+
+
 def relative_error(pred: Tensor, target: Tensor) -> Tensor:
     return torch.abs(target - pred) / (torch.abs(target) + 1e-8)
 
@@ -187,6 +191,16 @@ def print_mean_std(csv_filename: str, keywords: str, stack: bool = False):
             print_values(df_slice, column_name)
 
 
+def drop_df_columns(df: pd.DataFrame) -> pd.DataFrame:
+    if any('nako_' in c for c in df.columns):
+        df = df.drop(columns=NAKO_DROP)
+    elif any('nifti_' in c for c in df.columns):
+        df = df.drop(columns=NIFTI_DROP)
+    else:
+        raise ValueError('NRMSE: Unknown type of dataset provided.')
+    return df
+
+
 def stack_df_columns(df: pd.DataFrame, stack: Iterable[str]) -> pd.DataFrame:
     """Stack all columns containing the same string or regex in stack to a single column."""
     stacked_series = []
@@ -263,6 +277,7 @@ def eval_to_latex(
     column_format = 'l' + 'c' * len(summary.columns)
     return styler.to_latex(position='h', column_format=column_format, position_float='centering',
                            multicol_align='c', hrules=True, convert_css=True, **kwargs)
+
 
 def normality_test(
     path: str,
@@ -487,8 +502,8 @@ def barplot_metric(
             values = rmse(df)
         elif metric == 'nrmse':
             if dataset is None:
-                raise ValueError('nRMSE: No reference test or validation set is given')
-            values = nrmse(df, dataset[df.columns.str.replace('absolute_error-', '')])
+                raise ValueError('NRMSE: No reference test or validation set is given')
+            values = nrmse(df, dataset, stack=stack)
         else:
             df.mean(axis=0)
 
@@ -541,8 +556,7 @@ def plot_correlation(
     **kwargs
 ) -> None:
     dataset = pd.read_csv(path)
-    columns_to_drop = ['id', 'nako_path'] if 'nako' in path else ['id', 'task', 'nifti_path']
-    dataset = dataset.drop(columns_to_drop, axis='columns')
+    dataset = drop_df_columns(dataset)
     if isinstance(stack, Iterable):
         dataset = stack_df_columns(dataset, stack)
     else:
