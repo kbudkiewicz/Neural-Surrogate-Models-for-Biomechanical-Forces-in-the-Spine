@@ -41,7 +41,12 @@ def rmse(df: pd.DataFrame) -> pd.Series:
     return np.sqrt(df.pow(2).mean())
 
 
-def nrmse(df: pd.DataFrame, dataset: pd.DataFrame) -> pd.Series:
+def nrmse(df: pd.DataFrame, dataset: pd.DataFrame, stack: Optional[dict] = None) -> pd.Series:
+    dataset = drop_df_columns(dataset)
+    if stack is not None:
+        dataset = stack_df_columns(dataset, stack=stack)
+        df = stack_df_columns(df, stack=stack)
+    dataset = dataset[df.columns.str.replace('absolute_error-', '')]
     normalized_rmse = rmse(df).values / dataset.std().values
     return pd.Series(normalized_rmse, index=df.columns)
 
