@@ -107,7 +107,7 @@ _MUSCLES_ABBREV: dict = {
 }
 _MUSCLES_LATIN_D = {k.lower(): v for k, v in _MUSCLES_ABBREV.items()}
 _MUSCLES_D = dict(zip(_MUSCLES, muscles_map(_MUSCLES, use_abbrev=True)))
-_PRELIMINARIES_D = dict(**_COMPRESSION_D, **_SHEAR_D, **_MUSCLES_D)
+_PRELIMINARIES_D = dict(**_COMPRESSION_D, **_SHEAR_D, **_MUSCLES_LATIN_D)
 
 
 # NAKO
@@ -133,6 +133,17 @@ def sort_order(x: str, order: str = 'axis'):
         return axis + vertebra
     else:
         raise ValueError('Unexpected order. Expected "vertebra" or "axis".')
+
+
+def sort_for_plot(key: str) -> tuple:
+    leg = int(key[1])
+    coord_num = int(key.split('_')[2])
+    return (
+        (leg - 1) // 2,  # leg pair
+        coord_num % 3,  # axis: 0=x, 1=y, 2=z
+        key.endswith('moment'),  # F before M
+        leg,  # leg within pair
+    )
 
 
 df = pd.read_csv('../data/csv/nako_zeroed.csv')

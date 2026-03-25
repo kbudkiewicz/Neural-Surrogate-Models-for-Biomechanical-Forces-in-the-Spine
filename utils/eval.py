@@ -6,8 +6,8 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-from utils.const import (_COMPRESSION_D, _SHEAR_D, _SHEARCOMPR_D, _MUSCLES_D, _PRELIMINARIES_D, _COORDS_D, _FORCES_D,
-                         _MOMENTS_D, _COORDS_ALL_D)
+from utils.const import (_COMPRESSION_D, _SHEAR_D, _SHEARCOMPR_D, _MUSCLES_D, _MUSCLES_LATIN_D, _PRELIMINARIES_D,
+                         _COORDS_D, _FORCES_D, _MOMENTS_D, _COORDS_ALL_D, sort_for_plot)
 from typing import Tuple, Optional, Union, Iterable, Callable
 from utils.preprocessing import wrap_dataloader, get_splits
 from data.utilities import rename_if_exists
