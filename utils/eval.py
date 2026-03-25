@@ -563,15 +563,19 @@ def plot_correlation(
 
 # COMPARING MODELS
 def compare_distributions(
-    data: str,
+    data: Union[str, pd.DataFrame],
     difference: bool = False,
     scale: bool = False,
     predictions: Optional[str] = None,
     stack: Optional[dict] = None,
     transform: Optional[Callable] = None,
+    plot_name: Optional[str] = None,
     **kwargs,
 ) -> None:
-    dataset = pd.read_csv(data)
+    if isinstance(data, str):
+        dataset = pd.read_csv(data)
+    elif isinstance(data, pd.DataFrame):
+        dataset = data
     rect = None
 
     if isinstance(predictions, str):
@@ -620,6 +624,8 @@ def compare_distributions(
         axis[0].set_ylabel('Frequency')
 
     plt.tight_layout(rect=rect)
+    if plot_name:
+        plt.savefig(plot_name, bbox_inches='tight', format='pdf')
     plt.show()
 
 
