@@ -484,7 +484,7 @@ def barplot_metric(
     if stack == _COORDS_D:
         fig, axes = plt.subplots(1, 2, figsize=figsize)
         ax, ax2 = axes
-    elif stack == _PRELIMINARIES_D or _COORDS_ALL_D:
+    elif stack == _PRELIMINARIES_D or stack == _COORDS_ALL_D:
         fig, axes = plt.subplots(2, 1, figsize=figsize)
         ax, ax2 = axes
     else:
@@ -493,7 +493,7 @@ def barplot_metric(
     offset_ticks = (len(eval_files) * width - width) / 2
 
     for file, label in eval_files:
-        offset = width * factor
+        offset = width * factor - offset_ticks
         df = pd.read_csv(file).drop(columns='id')
         regex = 'absolute_error-' if metric in ['rmse', 'nrmse'] else metric.__name__ + '-'
         df = df.filter(regex=regex)
@@ -501,7 +501,7 @@ def barplot_metric(
             df = remove_outliers(df)
         if isinstance(stack, Iterable):
             df = stack_df_columns(df, stack)
-        x = np.arange(len(df.columns)) * ((len(eval_files) + 1) * width) + offset
+        x = np.arange(len(df.columns)) * ((len(eval_files) + 1) * width)
 
         if metric == 'rmse':
             values = rmse(df)
@@ -512,20 +512,20 @@ def barplot_metric(
         else:
             df.mean(axis=0)
 
-        if stack == _COORDS_D or _COORDS_ALL_D or _PRELIMINARIES_D:
+        if stack == _COORDS_D or stack == _COORDS_ALL_D or stack == _PRELIMINARIES_D:
             left, right = get_slices(stack)
             torques, forces = values[left], values[right]
-            ax.bar(x[left], torques, label=label, log=log, width=width, **plt_kwargs)
-            ax2.bar(x[right], forces, label=label, log=log, width=width, **plt_kwargs)
+            ax.bar(x[left] + offset, torques, label=label, log=log, width=width, **plt_kwargs)
+            ax2.bar(x[right] + offset, forces, label=label, log=log, width=width, **plt_kwargs)
         else:
-            ax.bar(x, values, label=label, log=log, width=width, **plt_kwargs)
+            ax.bar(x + offset, values, label=label, log=log, width=width, **plt_kwargs)
         factor += 1
 
-    if stack == _COORDS_D or _COORDS_ALL_D or _PRELIMINARIES_D:
+    if stack == _COORDS_D or stack == _COORDS_ALL_D or stack == _PRELIMINARIES_D:
         xlabels = list(stack.values())
-        l_ylabel, r_ylabel = get_ylabels(metric, log=log)
-        ax.set_xticks(x[left] - offset_ticks, xlabels[left], rotation=90)
-        ax2.set_xticks(x[right] - offset_ticks, xlabels[right], rotation=90)
+        l_ylabel, r_ylabel = get_ylabels(metric, log=log, dataset=dataset)
+        ax.set_xticks(x[left], xlabels[left], rotation=90)
+        ax2.set_xticks(x[right], xlabels[right], rotation=90)
         ax.set_ylabel(l_ylabel)
         ax2.set_ylabel(r_ylabel)
         ax.grid(axis='y', linewidth=0.5, linestyle='--')
@@ -539,7 +539,7 @@ def barplot_metric(
     else:
         xlabels = list(stack.values()) if isinstance(stack, dict) else df.columns.str.replace('absolute_error-', '')
         _, ylabel = get_ylabels(metric, log=log)
-        ax.set_xticks(x - offset_ticks, xlabels, rotation=90)
+        ax.set_xticks(x, xlabels, rotation=90)
         ax.grid(axis='y', linewidth=0.5, linestyle='--')
         plt.ylabel(ylabel)
         plt.legend(bbox_to_anchor=(1.1, 0.6))
@@ -547,7 +547,7 @@ def barplot_metric(
 
     if plot_name:
         plot_name = rename_if_exists(plot_name)
-        plt.savefig(plot_name)
+        plt.savefig(plot_name, format='pdf')
     else:
         plt.show()
 
