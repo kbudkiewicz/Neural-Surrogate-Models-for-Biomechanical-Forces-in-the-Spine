@@ -203,6 +203,13 @@ def stack_df_columns(df: pd.DataFrame, stack: Iterable[str]) -> pd.DataFrame:
     return pd.concat(stacked_series, axis=1)
 
 
+def filter_l6(df: pd.DataFrame, include: bool = True) -> pd.DataFrame:
+    temp = df.filter(regex='L6')
+    temp = temp[df == 0].all(axis=1)
+    indices = temp[temp == include].index
+    return df.iloc[indices]
+
+
 def eval_to_latex(
     *metrics: Union[Callable, str],
     path: str,
