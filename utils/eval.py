@@ -613,15 +613,20 @@ def compare_distributions(
 
     # Labeling and titles
     for idx, axis in enumerate(ax.flat):
-        axis.set_xlabel('Force [N]')
+        if stack == _MUSCLES_D or stack == _MUSCLES_LATIN_D:
+            axis.set_yscale('log')
         if stack is not None and idx < len(stack):
             titles = list(stack.values())
-            if 'M_' in titles[idx]:
-                axis.set_xlabel('Moment [Nm]')
             axis.set_title(titles[idx])
-    # Add ylabel only to the left subplots
+    # Add labels only on the left and at the bottom
     for axis in ax:
         axis[0].set_ylabel('Frequency')
+    for axis in ax.T:
+        axis = axis[-1]
+        if 'M_' in axis.get_title():
+            axis.set_xlabel('Moment [Nm]')
+        else:
+            axis.set_xlabel('Force [N]')
 
     plt.tight_layout(rect=rect)
     if plot_name:
