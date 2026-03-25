@@ -316,6 +316,36 @@ def normality_test(
     return styler.to_latex(position='h', column_format=column_format, position_float='centering',
                            multicol_align='c', hrules=True, convert_css=True, buf=buf)
 
+
+def csv_to_latex(file: str, buf: str, is_nako: bool):
+    df = pd.read_csv(file)
+    df = drop_df_columns(df)
+
+    # define key for sorting
+    if is_nako:
+        key = lambda col: col.lower().split('_')[-1][0] + col.lower().split('_')[0][1]
+        columns = _COORDS_ALL_D
+        df = df[sorted(columns.keys(), key=key)]
+    else:
+        columns = _PRELIMINARIES_D
+        df = stack_df_columns(df, _PRELIMINARIES_D)
+        df = df[columns.keys()]
+
+    median = df.median(axis=0).values
+    mean = df.mean(axis=0).values
+    std = df.std(axis=0).values
+
+    index = pd.Series(['Median', 'Mean', 'Std'])
+    table = pd.DataFrame([median, mean, std], index=index, columns=columns.values()).T
+
+    # Save the table to LaTeX and add styling to it
+    table = table.style.map_index(lambda x: 'font-weight: bold;', axis='columns')  # columns in bold
+    table.format(precision=2)  # float precision
+    column_format = 'l' + 'c' * len(table.columns)
+    table.to_latex(position='h', column_format=column_format, position_float='centering', hrules=True,
+                   convert_css=True, buf=buf)
+
+
 # --- Plotting ---
 def stack_df_for_boxplot(df: pd.DataFrame, stack: Iterable[str]) -> pd.DataFrame:
     """
