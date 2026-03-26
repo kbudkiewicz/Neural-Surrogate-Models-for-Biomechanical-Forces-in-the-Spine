@@ -596,13 +596,19 @@ def plot_correlation(
         dataset = stack_df_columns(dataset, stack)
     else:
         dataset = dataset[dataset.columns[:121]]
-    corr = dataset.corr()
-    mask = np.triu(np.ones_like(corr, dtype=bool), k=1) if use_mask else None
+    pearson = dataset.corr()
+    spearman = dataset.corr(method='spearman')
+    if use_mask:
+        mask = np.triu(np.ones_like(pearson, dtype=bool), k=1)
 
-    plt.subplots(figsize=figsize)
+    fig, axes = plt.subplots(figsize=figsize, nrows=1, ncols=2)
+    cbar_ax = fig.add_axes([0.35, 0.92, 0.3, 0.02])
     xticklabels = yticklabels = 'auto' if stack is None else stack.values()
-    sns.heatmap(corr.round(2), mask=mask, cmap='coolwarm', square=True, vmin=-1, vmax=1,
-                xticklabels=xticklabels, yticklabels=yticklabels, cbar_kws={"shrink": .5}, **kwargs)
+    sns.heatmap(pearson.round(2), ax=axes[0], mask=mask, cmap='coolwarm', square=True, vmin=-1, vmax=1,
+                xticklabels=xticklabels, yticklabels=yticklabels, cbar=False, **kwargs)
+    sns.heatmap(spearman.round(2), ax=axes[1], mask=mask, cmap='coolwarm', square=True, vmin=-1, vmax=1,
+                xticklabels=xticklabels, yticklabels=yticklabels, cbar_kws={'orientation': 'horizontal'},
+                cbar_ax=cbar_ax, **kwargs)
     plt.tight_layout()
 
     if plot_name:
