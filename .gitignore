@@ -13,4 +13,4 @@ wandb/*
 __pycache__/*
 /tests
 */eval*
-/data/derivatives-sim
+/data/derivatives-sim*
