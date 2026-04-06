@@ -232,6 +232,7 @@ def filter_l6(df: pd.DataFrame, include: bool = True) -> Tuple[pd.DataFrame, pd.
 def eval_to_latex(
     *metrics: Union[Callable, str],
     path: str,
+    filter: bool = True,
     stack: Union[Iterable, str] = None,
     **kwargs
 ) -> str:
@@ -273,7 +274,9 @@ def eval_to_latex(
         summary.columns = original_columns.str.replace('_', ' ')
 
     # filter high values
-    summary = summary.where(summary.values < 1e3, '-')
+    summary = summary.dropna(axis='columns')
+    if filter:
+        summary = summary.mask(summary.values > 1e3, '-')
 
     # Add styling
     summary = summary.T
