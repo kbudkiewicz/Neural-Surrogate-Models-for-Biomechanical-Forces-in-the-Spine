@@ -2,12 +2,14 @@
 wandb/*
 
 # formats
-*.npz
-*.pyc
-*.pth
-*.mat
-*.xml
 *.csv
+*.mat
+*.npz
+*.pdf
+*.pth
+*.pyc
+*.tex
+*.xml
 
 # folders
 __pycache__/*
