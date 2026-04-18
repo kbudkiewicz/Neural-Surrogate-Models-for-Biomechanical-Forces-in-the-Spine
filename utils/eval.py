@@ -622,9 +622,11 @@ def plot_correlation(
 # COMPARING MODELS
 def compare_distributions(
     data: Union[str, pd.DataFrame],
+    use_subset: bool = True,
     difference: bool = False,
     scale: bool = False,
-    predictions: Optional[str] = None,
+    log: bool = False,
+    predictions: Optional[Iterable[Tuple[str, str]]] = None,
     stack: Optional[dict] = None,
     transform: Optional[Callable] = None,
     plot_name: Optional[str] = None,
@@ -634,27 +636,31 @@ def compare_distributions(
         dataset = pd.read_csv(data)
     elif isinstance(data, pd.DataFrame):
         dataset = data
-    rect = None
-
-    if isinstance(predictions, str):
-        preds = pd.read_csv(predictions).filter(regex='pred-')
-        preds.columns = preds.columns.str.replace('pred-', '')
+    if use_subset:
         _, val_idx, test_idx = get_splits(data.replace('.csv', '.npz'), dataset)
         dataset = dataset.iloc[test_idx]
-        preds.reset_index(inplace=True, drop=True)
-
-    # Yeo-Johnson transformation has to be performed for each variable separately so that each distribution is normalized
     if transform is not None:
         dataset = dataset.apply(transform, axis=0)
-
     if stack is not None:
+        if stack == _COORDS_ALL_D:
+            stack = {k: _COORDS_ALL_D[k] for k in sorted(_COORDS_ALL_D, key=sort_for_plot)}
         dataset = stack_df_columns(dataset, stack=stack)
-        if predictions is not None:
-            preds = stack_df_columns(preds, stack=stack)
     dataset.reset_index(inplace=True, drop=True)
+    rect = None
+
+    def unpack_preds(path: str) -> pd.DataFrame:
+        preds = pd.read_csv(path).filter(regex='pred-')
+        preds.columns = preds.columns.str.replace('pred-', '')
+        if stack is not None:
+            preds = stack_df_columns(preds, stack=stack)
+        preds.reset_index(inplace=True, drop=True)
+        return preds
 
     # Histograms
     if difference:
+        # If predictions are given, plot the difference for the first element only
+        if predictions is not None:
+            preds = unpack_preds(predictions[0][0])
         dataset -= preds  # unary operators act on index intersections
         if scale:
             dataset /= dataset.std()
@@ -662,12 +668,14 @@ def compare_distributions(
     else:
         ax = dataset.hist(label='Ground Truth', **kwargs)
         if predictions is not None:
-            preds.hist(ax=ax, label='Model', alpha=0.7, **kwargs)
+            for path, label in predictions:
+                preds = unpack_preds(path)
+                preds.hist(ax=ax, label=label, alpha=0.7, **kwargs)
             fig = ax.flat[0].get_figure()
             # Get handles and labels from just the first axis to avoid duplicates
             handles, labels = ax.flat[0].get_legend_handles_labels()
-            fig.legend(handles, labels, loc='upper center', ncol=2)
-            rect = [0, 0, 1, 0.99]
+            fig.legend(handles, labels, loc='upper center', ncol=len(predictions) + 1)
+            rect = [0, 0, 1, 0.98]
 
     # Labeling and titles
     for idx, axis in enumerate(ax.flat):
