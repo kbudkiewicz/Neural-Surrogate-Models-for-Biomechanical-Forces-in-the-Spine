@@ -123,11 +123,13 @@ class NakoDataset(BaseDataset):
     def __getitem__(self, idx: int) -> Tuple[Tensor, Tensor, float]:
         row = self.df.iloc[idx]
         t2w_path = row[self.paths_key]
-        mask_path = t2w_path.replace('nako_data', 'nako_msk')
+        mask_path = t2w_path.replace('/nako_data', '/nako_msk')
+        spine_path = mask_path.replace('-sag_T2w.nii.gz', '-sag_mod-T2w_seg-spine_msk.nii.gz')
+        vert_path = mask_path.replace('-sag_T2w.nii.gz', '-sag_mod-T2w_seg-vert_msk.nii.gz')
 
         img = self.import_nii(t2w_path)
-        spine_mask = self.import_mask(mask_path, '-sag_mod-T2w_seg-spine_msk.nii.gz')
-        vert_mask = self.import_mask(mask_path, '-sag_mod-T2w_seg-vert_msk.nii.gz')
+        spine_mask = self.import_mask(spine_path, '')
+        vert_mask = self.import_mask(vert_path, '')
         img = torch.cat([img, spine_mask, vert_mask], dim=0)
         target = torch.tensor(row[self.target_cols].to_numpy(np.float32))
         return img, target, torch.nan
