@@ -6,11 +6,13 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-from utils.const import (_COMPRESSION_D, _SHEAR_D, _SHEARCOMPR_D, _MUSCLES_D, _MUSCLES_LATIN_D, _PRELIMINARIES_D,
-                         _COORDS_D, _FORCES_D, _MOMENTS_D, _COORDS_ALL_D, sort_for_plot)
+from utils.const import (
+    _COMPRESSION_D, _SHEAR_D, _SHEARCOMPR_D, _MUSCLES_D, _MUSCLES_LATIN_D, _PRELIMINARIES_D, _COORDS_D, _FORCES_D,
+    _MOMENTS_D, _COORDS_ALL_D, sort_for_plot
+)
 from typing import Tuple, Optional, Union, Iterable, Callable
 from utils.preprocessing import wrap_dataloader, get_splits
-from data.utilities import rename_if_exists
+from data.utils import rename_if_exists
 from scipy.stats import normaltest, shapiro
 from torch import Tensor
 from torch.nn import Module
@@ -314,7 +316,7 @@ def normality_test(
     # Add styling
     results = results.T
     styler = results.style.map_index(lambda x: 'font-weight: bold;', axis='columns')  # columns in bold
-    styler.format(precision=2)  # float precision
+    styler.format(precision=4)  # float precision
     column_format = 'l' + 'c' * len(results.columns)
     return styler.to_latex(position='h', column_format=column_format, position_float='centering',
                            multicol_align='c', hrules=True, convert_css=True, buf=buf)
@@ -484,34 +486,43 @@ def plot_compare_models_bar(
 
 
 def get_slices(stack: dict) -> tuple[slice, slice]:
+    stop = len(stack)
     if stack == _COORDS_D:
-        return slice(3), slice(3, len(_COORDS_D))
-    elif stack == _COORDS_ALL_D or _PRELIMINARIES_D:
-        return slice(18), slice(18, len(_PRELIMINARIES_D))
+        start = 3
+    elif stack == _COORDS_ALL_D or stack == _PRELIMINARIES_D:
+        start = 18
     else:
         raise ValueError('Unsupported stack type.')
+    return slice(start), slice(start, stop)
 
 
 def barplot_metric(
     *eval_files: Tuple[str, str],
     metric: Union[Callable, str],
-    width: float = 0.25,
+    width: float = 0.5,
     figsize: tuple = (8, 5),
     remove: bool = False,
     log: bool = False,
+    label_bar: bool = False,
     stack: Optional[dict] = None,
     dataset: Optional[pd.DataFrame] = None,
     plot_name: Optional[str] = None,
     **plt_kwargs
 ):
-    def get_ylabels(metric, log: bool) -> Iterable[str]:
-        if metric in ['rmse', 'nrmse']:
-            l_ylabel, r_ylabel = 'RMSE [N]', 'RMSE [Nm]'
+    def get_ylabels(metric, dataset: Optional[pd.DataFrame] = None) -> Iterable[str]:
+        if isinstance(metric, str):
+            sigma = ''
+            if dataset is not None:
+                sigma = '$_\\text{STD}$'
+            if metric.lower() == 'rmse':
+                l_ylabel, r_ylabel = f'RMSE{sigma} [N]', f'RMSE{sigma} [Nm]'
+            elif metric.lower() == 'nrmse':
+                l_ylabel = r_ylabel = f'RMSE{sigma} [-]'
         else:
             l_ylabel = r_ylabel = metric.__name__.replace('_', ' ').capitalize() + ' [-]'
-        if log:
-            l_ylabel = 'Log ' + l_ylabel
-            r_ylabel = 'Log ' + r_ylabel
+        # if dataset is not None:
+        #     l_ylabel = 'Standardized ' + l_ylabel
+        #     r_ylabel = 'Standardized ' + r_ylabel
         return l_ylabel, r_ylabel
 
     if stack == _COORDS_D:
@@ -543,20 +554,27 @@ def barplot_metric(
                 raise ValueError('NRMSE: No reference test or validation set is given')
             values = nrmse(df, dataset, stack=stack)
         else:
-            df.mean(axis=0)
+            values = df.mean(axis=0)
+            if metric is relative_error:
+                values = values * 100
 
         if stack == _COORDS_D or stack == _COORDS_ALL_D or stack == _PRELIMINARIES_D:
             left, right = get_slices(stack)
             torques, forces = values[left], values[right]
-            ax.bar(x[left] + offset, torques, label=label, log=log, width=width, **plt_kwargs)
-            ax2.bar(x[right] + offset, forces, label=label, log=log, width=width, **plt_kwargs)
+            bar = ax.bar(x[left] + offset, torques, label=label, log=log, width=width, **plt_kwargs)
+            bar2 = ax2.bar(x[right] + offset, forces, label=label, log=log, width=width, **plt_kwargs)
+            if label_bar:
+                ax.bar_label(bar, fmt='{:.2f}', label_type='edge')
+                ax2.bar_label(bar2, fmt='{:.2f}', label_type='edge')
         else:
-            ax.bar(x + offset, values, label=label, log=log, width=width, **plt_kwargs)
+            bar = ax.bar(x + offset, values, label=label, log=log, width=width, **plt_kwargs)
+            if label_bar:
+                ax.bar_label(bar, fmt='{:.2f}', label_type='edge')
         factor += 1
 
     if stack == _COORDS_D or stack == _COORDS_ALL_D or stack == _PRELIMINARIES_D:
         xlabels = list(stack.values())
-        l_ylabel, r_ylabel = get_ylabels(metric, log=log, dataset=dataset)
+        l_ylabel, r_ylabel = get_ylabels(metric, dataset=dataset)
         ax.set_xticks(x[left], xlabels[left], rotation=90)
         ax2.set_xticks(x[right], xlabels[right], rotation=90)
         ax.set_ylabel(l_ylabel)
@@ -564,14 +582,14 @@ def barplot_metric(
         ax.grid(axis='y', linewidth=0.5, linestyle='--')
         ax2.grid(axis='y', linewidth=0.5, linestyle='--')
         if stack == _COORDS_D:
-            legend_kwargs = {'loc': 'center right', 'bbox_to_anchor': (1.5, 0.5)}
+            legend_kwargs = {'loc': 'center right', 'bbox_to_anchor': (1.65, 0.5)}
             ax2.legend(**legend_kwargs)
         else:
             legend_kwargs = {'loc': 'upper center', 'ncols': len(eval_files), 'bbox_to_anchor': (0.5, 1.3)}
             ax.legend(**legend_kwargs)
     else:
         xlabels = list(stack.values()) if isinstance(stack, dict) else df.columns.str.replace('absolute_error-', '')
-        _, ylabel = get_ylabels(metric, log=log)
+        _, ylabel = get_ylabels(metric)
         ax.set_xticks(x, xlabels, rotation=90)
         ax.grid(axis='y', linewidth=0.5, linestyle='--')
         plt.ylabel(ylabel)
@@ -590,28 +608,40 @@ def plot_correlation(
     figsize: tuple = (15, 12),
     use_mask: bool = True,
     stack: Optional[Iterable[str]] = None,
+    columns: Optional[Iterable[str]] = None,
     plot_name: Optional[str] = None,
     **kwargs
 ) -> None:
     dataset = pd.read_csv(path)
     dataset = drop_df_columns(dataset)
+
     if isinstance(stack, Iterable):
         dataset = stack_df_columns(dataset, stack)
     else:
         dataset = dataset[dataset.columns[:121]]
-    pearson = dataset.corr()
-    spearman = dataset.corr(method='spearman')
-    if use_mask:
-        mask = np.triu(np.ones_like(pearson, dtype=bool), k=1)
 
-    fig, axes = plt.subplots(figsize=figsize, nrows=1, ncols=2)
-    cbar_ax = fig.add_axes([0.35, 0.92, 0.3, 0.02])
+    spearman = dataset.corr(method='spearman')
+
+    # Select a subsquare
+    if columns is not None:
+        if isinstance(columns, Tuple):
+            rows, columns = columns
+            spearman = spearman.filter(regex=rows, axis=0)
+        spearman = spearman.filter(regex=columns, axis=1)
+        means, stds = spearman.mean(axis=0), spearman.std(axis=0)
+        summary = pd.DataFrame([means.round(2), stds.round(2)])
+        print(summary.to_string())
+        return
+
+    if use_mask:
+        mask = np.triu(np.ones_like(spearman, dtype=bool), k=1)
+
+    fig, ax = plt.subplots(figsize=figsize)
     xticklabels = yticklabels = 'auto' if stack is None else stack.values()
-    sns.heatmap(pearson.round(2), ax=axes[0], mask=mask, cmap='coolwarm', square=True, vmin=-1, vmax=1,
-                xticklabels=xticklabels, yticklabels=yticklabels, cbar=False, **kwargs)
-    sns.heatmap(spearman.round(2), ax=axes[1], mask=mask, cmap='coolwarm', square=True, vmin=-1, vmax=1,
-                xticklabels=xticklabels, yticklabels=yticklabels, cbar_kws={'orientation': 'horizontal'},
-                cbar_ax=cbar_ax, **kwargs)
+    sns.heatmap(
+        spearman.round(2), ax=ax, mask=mask, cmap='coolwarm', square=True, vmin=-1, vmax=1,
+        xticklabels=xticklabels, yticklabels=yticklabels, cbar_kws=dict(shrink=0.75), **kwargs
+    )
     plt.tight_layout()
 
     if plot_name:
@@ -698,61 +728,3 @@ def compare_distributions(
     if plot_name:
         plt.savefig(plot_name, bbox_inches='tight', format='pdf')
     plt.show()
-
-
-def compare_models(
-    *eval_files: Tuple[str, str],
-    metric: Callable = absolute_error,
-    width: float = 0.25,
-    figsize: tuple = (8, 5),
-    stack: Optional[Iterable[str]] = None
-):
-    fig, ax = plt.subplots(figsize=figsize)
-    factor = 0
-    offset_ticks = (len(eval_files) * width - width) / 2
-    labels = pd.Index([item[1] for item in eval_files])
-
-    pivot = {l: pd.read_csv(p) for p, l in eval_files}
-    for l, d in pivot.items():
-        d = d.filter(regex=metric.__name__ + '-')
-        d = stack_df_columns(d, stack=stack)
-        # d.drop(columns='id', inplace=True)
-        d.insert(0, 'label', l)
-        pivot[l] = d
-    df = pd.concat([d for d in pivot.values()], ignore_index=True)
-
-    # define the first model in eval_files as the base reference
-    base = df[df['label'] == labels[0]]
-    base = base[base.columns[~base.columns.str.contains('label')]].mean()
-    # base['label'] = labels[0]
-
-    for label, df in pivot.items():
-        if label == labels[0]:
-            continue
-        offset = width * factor
-        if metric.__name__ == 'rmse':
-            base = rmse(base)
-        df = df.filter(regex=metric.__name__ + '-')
-        df = df.mean()
-        # scale values to the reference model
-        # df = df.apply(scale, base=base)
-        df /= base
-        df *= 100
-        # vals = rmse(df)
-        x = np.arange(len(df.index)) * ((len(eval_files) + 1) * width) + offset
-        bar = ax.bar(x, df.values, label=label, width=width, alpha=0.75)
-        ax.bar_label(bar, fmt='{:.2f}%', label_type='edge')
-        factor += 1
-
-    labels = list(stack.values()) if isinstance(stack, dict) else stack
-    ax.set_xticks(x - offset_ticks, labels, rotation=90)
-    ax.grid(axis='y', linewidth=0.5, linestyle='--')
-    plt.ylabel(metric.__name__.replace('_', ' ').capitalize())
-    plt.legend(bbox_to_anchor=(1.1, 0.6))
-    plt.tight_layout()
-    plt.show()
-
-
-# DEBUG
-# if __name__ == '__main__':
-#     plot_metric('abs_err', '../data/eval/eval.csv', 'test')

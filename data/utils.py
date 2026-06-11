@@ -30,10 +30,7 @@ def prepare_dirs(eval_path: str, dataset_name: str, eval_name: str = 'eval.csv')
     if not os.path.isdir(eval_path):
         print(f'Path "{eval_path}" does not exist. Creating directory...')
         os.makedirs(eval_path)
-    # else:
-    #     eval_path = rename_if_exists(eval_path)
-    #     os.mkdir(eval_path)
-    eval_name = os.path.join(eval_path, eval_name)
+    eval_name = os.path.join(eval_path, f'{dataset_name}-{eval_name}')
     model_name = os.path.join(eval_path, dataset_name + '.pth')
     model_name = rename_if_exists(model_name)
     return eval_name, model_name
@@ -228,4 +225,13 @@ def get_img_paths(folder: str, pattern: str = 'ct.nii.gz') -> str:
             print(f"Expected one image, found {len(images)} in {folder}")
         return os.path.join(folder, images[0])
     except FileNotFoundError:
-        raise FileNotFoundError(f"No ct.nii.gz files found along {folder}")
+        raise FileNotFoundError(f"No files containing '{pattern}' found along {folder}")
+
+
+# DEBUG
+# if __name__ == '__main__':
+    # df = read_osim('osim/100000_base.osim')
+    # generate_npz()
+    # d = npz_to_dict('default.npz')
+    # for scalar in get_scalars('muscle', 'compr', 'shear', npz=d):
+    #     print(scalar)

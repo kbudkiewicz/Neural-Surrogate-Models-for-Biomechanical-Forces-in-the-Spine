@@ -5,8 +5,9 @@ import numpy as np
 import pandas as pd
 import nibabel as nib
 
-from utils import (npz_to_dict, get_pat_ses, get_img_paths, generate_npz, get_scalars, unpack_scalar_from_dict,
-                   read_sto, read_osim)
+from utils import (
+    npz_to_dict, get_pat_ses, get_img_paths, generate_npz, get_scalars, unpack_scalar_from_dict, read_sto, read_osim
+)
 
 SCALARS: tuple = 'compr', 'shear', 'muscles', 'Ang'
 STO_FILES: dict = {
@@ -37,7 +38,7 @@ def create_csv_from_sto(root: str, csv_filename: str, desired: str = 'ID', use_o
     .. note:: data and segmentation paths below are symbolic links to the datasets.
     """
     # data_path = segmentation_path = './'  # DEBUG
-    data_path = segmentation_path = './derivatives-sim/rawdata_stitched'
+    data_path = segmentation_path = '/u/home/budk/dataset-nako/rawdata_stitched'
     df = pd.DataFrame([])
     df_osim = pd.DataFrame([])
     if desired not in STO_FILES.keys():

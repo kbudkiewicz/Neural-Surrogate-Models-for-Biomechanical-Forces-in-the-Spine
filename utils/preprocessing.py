@@ -15,7 +15,7 @@ def _change_nifti_path(csv_file):
     df.to_csv(csv_file, index=False)
 
 
-def get_splits(npz_filename: str, df: pd.DataFrame) -> Tuple:
+def get_splits(npz_filename: str, df: pd.DataFrame, allow_pickle: bool = False) -> Tuple:
     """Create a split 80/10/10 (train/val/test) if it doesn't exist already. Otherwise, load an existing split."""
     if not os.path.isfile(npz_filename):
         indices = np.arange(len(df))
@@ -34,7 +34,7 @@ def get_splits(npz_filename: str, df: pd.DataFrame) -> Tuple:
         np.savez(npz_filename, train=train_idx, val=val_idx, test=test_idx)
         print(f"Created and saved new data split to {npz_filename}")
     else:
-        loaded_split = np.load(npz_filename)
+        loaded_split = np.load(npz_filename, allow_pickle=allow_pickle)
         train_idx = loaded_split['train']
         val_idx = loaded_split['val']
         test_idx = loaded_split['test']
@@ -74,8 +74,8 @@ def tensor_to_dict(pred: Tensor, target: Tensor, tnames: iter, predicate: str) -
     return d
 
 
+# DEBUG
 # if __name__ == '__main__':
     # for csv in {'../ct_nifti_scalars.csv', '../ct_nifti_scalars_full.csv', '../data.csv', '../test_predictions.csv'}:
     #     _change_nifti_path(csv)
-
     # print('Done.')

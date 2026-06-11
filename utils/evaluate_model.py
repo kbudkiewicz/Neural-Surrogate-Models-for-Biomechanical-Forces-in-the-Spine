@@ -29,18 +29,9 @@ if __name__ == '__main__':
     # validation indices
     indices = {k: v for k, v in zip(SUBSET_CHOICES, get_splits(npz_name, df))}
     dataset = ShearComprDataset(df.iloc[indices[args.subset]])
-    # dataset._mask_df('task', 'Optim_0', True) #
     loader = DataLoader(dataset, batch_size=8, num_workers=args.num_workers, generator=torch.manual_seed(0))
     model = ResNet3DRegressor(out_features=dataset.dim)
-    # model = MultilayerPerceptron(103, 512, 512, 256, dataset.dim)
-    # model = Chimera(512, 128, dataset.dim)
     model.to(device)
-
-    # resnet = ResNet3DRegressor(out_features=103)
-    # mlp = MultilayerPerceptron(103, 512, 512, 256, dataset.dim)
-    # resnet.load_state_dict(torch.load('muscle.pth'))
-    # mlp.load_state_dict(torch.load('forcetoforce_5.pth'))
-    # model = Chimera(resnet=resnet, mlp=mlp).to(device)
 
     eval_path = os.path.join('../data', 'eval_' + model.__class__.__name__.lower(), dataset.name)
     eval_name = args.eval_name + '_' + args.subset + '.csv'

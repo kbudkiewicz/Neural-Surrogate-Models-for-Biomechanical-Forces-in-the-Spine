@@ -1,4 +1,0 @@
-epochs: 100
-batch_size: 2
-lr: 1.0e-4
-target_size: 160

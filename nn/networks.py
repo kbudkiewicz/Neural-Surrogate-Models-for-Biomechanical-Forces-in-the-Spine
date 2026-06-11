@@ -1,9 +1,10 @@
 import torchvision.models.video as video_models
+
+from typing import Optional
+from . import *
+from .modules import LinearBlock, BasicStem
 from torchvision.models.video.swin_transformer import SwinTransformer3d, PatchEmbed3d
 from torchvision.models.video.resnet import Conv3DSimple, BasicBlock, VideoResNet
-from . import *
-from typing import Optional
-from .modules import LinearBlock
 
 
 class MultilayerPerceptron(Module):
@@ -19,15 +20,6 @@ class MultilayerPerceptron(Module):
         if conditioning_embedding is not None:
             x += conditioning_embedding
         return self.net(x)
-
-
-class BasicStem(nn.Sequential):
-    def __init__(self, in_features: int = 3):
-        super().__init__(
-            nn.Conv3d(in_features, 64, kernel_size=(3, 7, 7), stride=(1, 2, 2), padding=(1, 3, 3), bias=False),
-            nn.BatchNorm3d(64),
-            nn.ReLU(inplace=True),
-        )
 
 
 class ResNet3DRegressor(nn.Module):
@@ -88,31 +80,40 @@ class Chimera(Module):
 
 
 # VisionTransformer
-class SwinTransformer3DRegressor(Module):
-    """Basic SwinTransformer3D regression network.
+class VideoSwinTransformer3DRegressor(Module):
+    """Basic Video Swin Transformer (VST) regression network.
 
     .. note::
-        The parameters of the small SwinTransformer3D model are used."""
-    def __init__(self, in_channels: int, out_features: int):
+        The parameters of the small VST with approximately 49.8 million parameters are used.
+    """
+    def __init__(self, in_channels: int, out_features: int, model_config: Optional[str] = None):
         super().__init__()
-        self.backbone = SwinTransformer3d(
-            ### small
-            patch_size=[2, 4, 4],
-            embed_dim=96,
-            depths=[2, 2, 18, 2],
-            num_heads=[3, 6, 12, 24],
-            window_size=[8, 7, 7],
-            stochastic_depth_prob=0.1,
-            ### tiny
-            # patch_size=[2, 4, 4],
-            # embed_dim=96,
-            # depths=[2, 2, 6, 2],
-            # num_heads=[3, 6, 12, 24],
-            # window_size=[8, 7, 7],
-            # stochastic_depth_prob=0.1,
-        )
+
+        # Small VST as default
+        configs = {
+            'tiny': dict(
+                patch_size=[2, 4, 4], embed_dim=96, depths=[2, 2, 6, 2], num_heads=[3, 6, 12, 24],
+                window_size=[8, 7, 7], stochastic_depth_prob=0.1
+            ),
+            'small': dict(
+                patch_size=[2, 4, 4], embed_dim=96, depths=[2, 2, 18, 2], num_heads=[3, 6, 12, 24],
+                window_size=[8, 7, 7], stochastic_depth_prob=0.1
+            ),
+            'big': dict(
+                patch_size=[2, 4, 4], embed_dim=128, depths=[2, 2, 18, 2], num_heads=[4, 8, 16, 32],
+                window_size=[8, 7, 7], stochastic_depth_prob=0.1)
+        }
+
+        if isinstance(model_config, str) and model_config in configs.keys():
+            config = configs[model_config]
+        else:
+            config = configs['small']
+
+        self.backbone = SwinTransformer3d(**config)
         # Line 417 in swin_transformer.py
-        self.backbone.patch_embed = PatchEmbed3d(in_channels=in_channels, patch_size=[2, 4, 4], norm_layer=nn.LayerNorm)
+        self.backbone.patch_embed = PatchEmbed3d(
+            in_channels=in_channels, patch_size=config['patch_size'], norm_layer=nn.LayerNorm
+        )
         self.backbone.head = nn.Linear(self.backbone.num_features, out_features)
 
     def forward(self, x: Tensor) -> Tensor:
