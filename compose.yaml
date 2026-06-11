@@ -1,0 +1,20 @@
+name: spine_simulation
+
+services:
+  image: "pytorch/pytorch:2.7.1-cuda11.8-cudnn9-runtime"
+  working_dir: /src
+  labels:
+    - container_name: spine_simulation_cuda
+    - description: "Master Thesis: Neural Surrogate Models for Biomechanical Forces in the Spine"
+    - authors: "jonas_krystian"
+  volumes:
+    - type: volume
+      source: /mnt/Drive2/jonas/datasets/CT_nofx/full_dataset/CT_nofx
+      target: /mnt
+      #read_only: true
+    - type: volume
+      source: ~
+      target: /src
+  shm_size: 32gb
+  gpus: all
+  ports: 2001
